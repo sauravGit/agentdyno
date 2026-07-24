@@ -195,3 +195,32 @@ Format: each entry = date, decision/question, answer, why, evidence.
   be completed autonomously. Push is staged and waiting on that auth. This is
   a hard external blocker, logged rather than worked around (per guardrails,
   no alternative account may be substituted silently).
+
+### D-014: Shipped — private repo + release, final self-grade
+- Repo: github.com/sauravGit/agentdyno (PRIVATE, verified via API). Author on
+  all commits: sauravGit. Release v0.1.0 published (non-draft) with notes;
+  both videos attached as release assets.
+- Auth note: user directed "use sauravGit to authenticate". gh already had
+  sauravGit in its keyring (inactive); switched active account rather than a
+  fresh interactive login. No new credentials created.
+
+### Definition-of-done self-grade (honest)
+- [PASS] Every guardrail held (no spend; private/local only; nothing invented;
+  no Athanor code copied; never asked, never stalled) — see recap "guardrails".
+- [PASS] Every thesis claim has a live URL — 101 unique source URLs; REPORT.md.
+- [PASS] Site screenshot-verified on mobile + desktop; fixed a real horizontal-
+  overflow bug on mobile and re-verified with an iframe scrollWidth probe.
+- [PASS w/ caveat] Both videos render; I watched representative extracted frames
+  of each (cannot play video in real time), confirming content + styling. The
+  full 30fps playback was not observed frame-by-frame — stated plainly.
+- [PASS] recap.html links every deliverable; all 16 local links resolve (checked).
+- [PASS] Brand guidelines complete enough for a stranger to make a new asset.
+- [PASS] Red team ran (two passes); objections visible in RED_TEAM.md + recap,
+  including the UNRESOLVED go-to-market bet (O1) and our own probe bug (O3).
+- [PASS] No placeholders pretending to be finished.
+- [ASSUMPTION] "Founder script passes my voice rules": user did not supply an
+  explicit voice-rules doc; applied the brand voice (instrument-not-salesman,
+  no hype, no emojis, measurement verbs) defined in BRAND.md. If specific voice
+  rules exist, the script (brand/LAUNCH_VIDEO_SCRIPT.md) may need a pass.
+- [CUT, logged] Windows path designed but untested (no Windows machine);
+  repeat-N probe stability (O2) deferred; MLX backend deferred to future work.
