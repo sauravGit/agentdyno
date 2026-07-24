@@ -17,6 +17,13 @@ export interface ProbeResult {
   ms: number;
 }
 
+export const GRADE_MEANING: Record<"A" | "B" | "C" | "F", string> = {
+  A: "agent-ready on this machine at this context — loop solid, edits and long-context recall verified",
+  B: "usable for agentic coding; one quality dimension (edit fidelity or long-context recall) is unreliable",
+  C: "runs the agent loop but corrupts edits AND loses long context — expect silent breakage",
+  F: "cannot drive the agent loop (tool calls malformed, wrong, or ignored); do not wire an agent to this",
+};
+
 export interface ExamReport {
   modelId: string;
   context: number;
@@ -121,6 +128,28 @@ async function timed(
 
 const tps = (r: ChatResponse) => r.timings?.predicted_per_second ?? null;
 
+/**
+ * Mechanism-based rubric. The agent LOOP is P1 (emits a well-formed tool call),
+ * P2 (selects the right tool under load), P3 (consumes a real tool result) —
+ * fail any of these and the model literally cannot drive an agent. P4 (edit
+ * fidelity) and P5 (long-context recall) are QUALITY dimensions: a loop-capable
+ * model that fails them is usable but will occasionally corrupt an edit or lose
+ * context. A also requires usable speed.
+ */
+export function gradeFromProbes(
+  results: Pick<ProbeResult, "id" | "pass">[],
+  genTokensPerSec: number | null,
+  minTpsForA = 15
+): ExamReport["grade"] {
+  const by = Object.fromEntries(results.map((r) => [r.id, r.pass]));
+  const loopOk = by.P1 && by.P2 && by.P3;
+  const qualityPasses = (by.P4 ? 1 : 0) + (by.P5 ? 1 : 0);
+  if (!loopOk) return "F";
+  if (qualityPasses === 2 && (genTokensPerSec ?? 0) >= minTpsForA) return "A";
+  if (qualityPasses >= 1) return "B";
+  return "C";
+}
+
 export async function runExam(modelId: string, context: number): Promise<ExamReport> {
   const results: ProbeResult[] = [];
 
@@ -218,13 +247,16 @@ export async function runExam(modelId: string, context: number): Promise<ExamRep
       const lines = Math.max(50, Math.floor(targetTokens / 14)); // ~14 tok/line
       let body = "// PROJECT CONSTANT: BUILD_ID = 90125\n";
       for (let i = 0; i < lines; i++) body += filler.replaceAll("%i", String(i));
+      // maxTokens must leave room for a short preamble + the whole tool call:
+      // at 256 tokens some models (e.g. Qwen3) get truncated mid-call and
+      // finish_reason=length yields no parseable call — a false negative.
       const r = await chat(
         [
           { role: "system", content: "You are a coding agent. Use tools to act." },
           { role: "user", content: `Here is utils.js:\n${body}\nWrite the BUILD_ID value (just the number) to build_id.txt.` },
         ],
         [WRITE_FILE],
-        256
+        512
       );
       const tc = firstToolCall(r);
       const args = tc && parseArgs(tc);
@@ -236,13 +268,7 @@ export async function runExam(modelId: string, context: number): Promise<ExamRep
 
   const speeds = results.map((r) => r.tokensPerSec).filter((x): x is number => x !== null);
   const genTps = speeds.length ? speeds.reduce((a, b) => a + b, 0) / speeds.length : null;
-  const passes = results.filter((r) => r.pass).length;
-  const core = results.slice(0, 4).every((r) => r.pass); // P1-P4
-  let grade: ExamReport["grade"];
-  if (passes === 5 && (genTps ?? 0) >= 15) grade = "A";
-  else if (core) grade = "B";
-  else if (passes >= 2) grade = "C";
-  else grade = "F";
+  const grade = gradeFromProbes(results, genTps);
 
   return {
     modelId,

@@ -62,7 +62,7 @@ footer .links{margin-bottom:10px}
   your own hardware, that the model can actually drive tools before you wire up Claude Code,
   OpenCode, or Aider.</p>
   <a class="cta" href="#quickstart">Run the exam</a>
-  <a class="cta ghost" href="https://github.com/paromitapa/agentdyno">Source (Apache-2.0)</a>
+  <a class="cta ghost" href="https://github.com/sauravGit/agentdyno">Source (Apache-2.0)</a>
   <p class="notice">Local, free, open source. No account, no telemetry, no paid tier — the
   entire category exists because people are done with subscriptions.</p>
 </div>
@@ -86,28 +86,42 @@ footer .links{margin-bottom:10px}
 </section>
 
 <section>
-  <h2>// the exam</h2>
+  <h2>// the exam — real output, one laptop, two models</h2>
+  <p class="notice" style="margin-top:0;margin-bottom:20px">Measured on a MacBook Air M4, 16 GB, context 21,535. Not a mockup —
+  the saved <a href="certificates/qwen3-8b.html">Qwen3-8B</a> and
+  <a href="certificates/qwen2.5-coder-7b.html">Qwen2.5-Coder-7B</a> certificates are in this repo.</p>
   <div class="panel">
+  <div style="margin-bottom:8px" class="mono">Qwen3 8B &nbsp;<span style="color:var(--muted)">— passes the loop, recalls long context, fumbles one escaped string</span></div>
   <table>
-    <tr><th>probe</th><th>proves</th><th>screens for</th><th>result</th></tr>
-    <tr><td class="mono">P1 single tool call</td><td>well-formed tool_call JSON</td><td>raw XML / prose instead of a call</td><td class="pass">PASS 41.2 tok/s</td></tr>
-    <tr><td class="mono">P2 selection among 9</td><td>right tool under load</td><td>degradation past ~5 tools</td><td class="pass">PASS 39.8 tok/s</td></tr>
-    <tr><td class="mono">P3 result round trip</td><td>uses real tool output</td><td>"says done, did nothing"</td><td class="pass">PASS 40.5 tok/s</td></tr>
-    <tr><td class="mono">P4 tricky-string args</td><td>quotes/newlines survive</td><td>mangled edit payloads</td><td class="pass">PASS 38.9 tok/s</td></tr>
-    <tr><td class="mono">P5 long-context recall</td><td>facts from context start</td><td>forgetting the file it read</td><td class="pass">PASS 36.1 tok/s</td></tr>
+    <tr><th>probe</th><th>proves</th><th>result</th></tr>
+    <tr><td class="mono">P1 single tool call</td><td>well-formed tool_call JSON</td><td class="pass">PASS 18.3 tok/s</td></tr>
+    <tr><td class="mono">P2 selection among 9</td><td>right tool under load</td><td class="pass">PASS 16.7 tok/s</td></tr>
+    <tr><td class="mono">P3 result round trip</td><td>uses real tool output</td><td class="pass">PASS 16.8 tok/s</td></tr>
+    <tr><td class="mono">P4 tricky-string args</td><td>escaped quotes survive</td><td class="fail">FAIL — dropped a backslash</td></tr>
+    <tr><td class="mono">P5 long-context recall</td><td>facts from context start</td><td class="pass">PASS 12.3 tok/s</td></tr>
   </table>
-  <p style="margin-top:18px"><span class="stamp">A</span>&nbsp;&nbsp;<span class="mono" style="color:var(--muted)">agent-ready on this machine at this context — report saved, config verified</span></p>
+  <p style="margin-top:18px"><span class="stamp" style="border-color:var(--warn);color:var(--warn)">B</span>&nbsp;&nbsp;<span class="mono" style="color:var(--muted)">usable for agentic coding; edit fidelity is the weak spot</span></p>
   </div>
-  <p class="notice">Illustrative output. Grades: A — all probes pass at usable speed.
-  B — core pass, limited context or speed. C — chat only. F — cannot drive tools.
-  A grade C is printed as proudly as an A; honesty is the product.</p>
+  <div class="panel" style="margin-top:16px">
+  <div style="margin-bottom:8px" class="mono">Qwen2.5 Coder 7B &nbsp;<span style="color:var(--muted)">— fits comfortably, and cannot drive tools at all</span></div>
+  <table>
+    <tr><th>probe</th><th>observed</th><th>result</th></tr>
+    <tr><td class="mono">P1 single tool call</td><td>emitted raw <span style="color:var(--fail)">&lt;function .../&gt;</span> XML, not a tool call</td><td class="fail">FAIL</td></tr>
+    <tr><td class="mono">P2–P5</td><td>loop never starts</td><td class="fail">FAIL</td></tr>
+  </table>
+  <p style="margin-top:18px"><span class="stamp" style="border-color:var(--fail);color:var(--fail)">F</span>&nbsp;&nbsp;<span class="mono" style="color:var(--muted)">your agent would say "done" while editing nothing</span></p>
+  </div>
+  <p class="notice">Grades: A — loop solid + edits + long-context recall, at usable speed.
+  B — loop solid, one quality dimension weak. C — loop runs but edits and recall both fail.
+  F — cannot drive the loop. A grade F is printed as plainly as an A; honesty is the product.
+  These grades measure THIS machine, not a general model ranking.</p>
 </section>
 
 <section id="quickstart">
   <h2>// quickstart</h2>
   <div class="panel"><pre>
 <span class="c"># macOS (Apple Silicon or Intel), Linux; Windows experimental</span>
-git clone https://github.com/paromitapa/agentdyno && cd agentdyno
+git clone https://github.com/sauravGit/agentdyno && cd agentdyno
 npm install && npm run build
 
 node dist/src/cli.js scan     <span class="c"># what this machine really has</span>
@@ -146,7 +160,7 @@ node dist/src/cli.js connect claude   <span class="c"># wire an agent to the VER
 
 <footer><div class="wrap">
   <div class="links mono">
-    <a href="https://github.com/paromitapa/agentdyno">github</a> ·
+    <a href="https://github.com/sauravGit/agentdyno">github</a> ·
     <a href="https://github.com/ggml-org/llama.cpp">llama.cpp</a> ·
     <a href="https://github.com/AlexsJones/llmfit">llmfit</a> ·
     <a href="https://github.com/BBALabs/athanor-lite">athanor-lite (inspiration)</a>

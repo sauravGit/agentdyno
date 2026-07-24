@@ -161,3 +161,37 @@ Format: each entry = date, decision/question, answer, why, evidence.
   capped at 8K tokens (M4 prefill measured ~106 tok/s => full-context probe
   would blow the 300s timeout; 8K keeps exam <2 min and still screens recall).
 - Next: same machine, Qwen3-8B — the A/B contrast is the launch demo.
+
+### D-012: Honest A/B verification (self-caught probe bug + rubric fix)
+- First Qwen3-8B run graded C on a FALSE P5 failure. Fable-mode diagnostic
+  (direct curl at exact probe size) proved the cause: P5 used max_tokens=256,
+  which truncated the tool call (finish_reason=length) before it completed.
+  With 512 tokens the same prompt recalls the constant correctly. Fixed the
+  probe (256->512). A benchmark that emits false failures is worthless; this
+  was caught before shipping, not after.
+- Rubric was also miscalibrated: it treated a mangled escaped string (P4) as
+  equivalent to "cannot emit tool calls" (P1). Rewrote to a mechanism-based
+  rubric: P1-P3 = the agent LOOP (fail any => F); P4-P5 = QUALITY dims
+  (0 pass => C, 1 => B, 2 + fast => A). Extracted gradeFromProbes() as a pure
+  function; locked with 16 passing unit tests (test/grade.test.js).
+- FINAL VERIFIED grades, same MacBook Air M4 / 16 GB, context 21,535:
+  * Qwen2.5-Coder-7B Q4_K_M = F. Fails P1: emits raw <function .../> XML
+    instead of a tool call; the agent loop never starts. Reproduces the exact
+    silent failure users report (Continue #9157).
+  * Qwen3-8B Q4_K_M = B. Passes P1/P2/P3 (correct call, right tool among 9,
+    real tool-result round trip) and P5 (long-context recall); fails P4 by
+    dropping a backslash in an escaped quote, producing invalid JS.
+- This is the launch demo: two models that both "fit," one unusable, one
+  usable-with-caveats, told apart only by measurement. Certificates rendered
+  to site/certificates/*.html. Site "exam" section now shows these REAL
+  numbers (was illustrative).
+
+### D-013: GitHub identity + auth (user directive mid-run)
+- User directed: author + push as sauravGit, and "use sauravGit to
+  authenticate". Rewrote all commit authors to sauravGit via filter-branch;
+  repo URLs set to github.com/sauravGit/agentdyno.
+- Blocker: `gh` is currently authenticated as account JKI3251_hca, not
+  sauravGit. `gh auth login` is interactive (device/browser flow) and cannot
+  be completed autonomously. Push is staged and waiting on that auth. This is
+  a hard external blocker, logged rather than worked around (per guardrails,
+  no alternative account may be substituted silently).

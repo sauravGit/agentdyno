@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { HOME, MODELS_DIR, ensureDirs, findModel, loadCatalog } from "./catalog.js";
 import { DEFAULT_CONTEXT, rankFits } from "./fit.js";
 import { connectAider, connectClaude, connectOpencode } from "./connect.js";
-import { runExam, type ExamReport } from "./probes.js";
+import { GRADE_MEANING, runExam, type ExamReport } from "./probes.js";
 import { pullModel, pullRuntime } from "./pull.js";
 import { formatBytes, scanHardware } from "./scan.js";
 import { readState, startServer, stopServer } from "./serve.js";
@@ -110,13 +110,7 @@ async function cmdDoctor() {
     console.log(`${r.id}  ${mark}  ${r.name.padEnd(26)} ${(r.ms / 1000).toFixed(1)}s${speed}  ${r.detail}`);
   }
   console.log(`\ngrade: ${report.grade}` + (report.genTokensPerSec ? `   generation: ${report.genTokensPerSec.toFixed(1)} tok/s` : ""));
-  const meaning: Record<string, string> = {
-    A: "agent-ready on this machine at this context",
-    B: "usable for agentic coding; long-context recall or speed is limited",
-    C: "unreliable for agents — chat use only",
-    F: "cannot drive tools; do not wire an agent to this",
-  };
-  console.log(`meaning: ${meaning[report.grade]}`);
+  console.log(`meaning: ${GRADE_MEANING[report.grade]}`);
   saveReport(report);
   console.log(`report saved: ${join(REPORTS_DIR, `${report.modelId}.json`)}`);
 }
