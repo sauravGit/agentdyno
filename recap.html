@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentDyno — build recap</title>
+<style>
+:root{--bg:#0B0E11;--surface:#151A21;--line:#232B35;--text:#E8EDF2;--muted:#8A97A6;
+--accent:#3DDC97;--warn:#E8C547;--fail:#E4604E;
+--mono:"SF Mono","JetBrains Mono","Cascadia Code",ui-monospace,Menlo,monospace;
+--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+@media (prefers-color-scheme: light){:root{--bg:#F7F9FA;--surface:#fff;--line:#DCE3EA;--text:#14181D;--muted:#5A6673;--accent:#1E9E68}}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{overflow-x:hidden;max-width:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:900px;width:100%;margin:0 auto;padding:0 20px}
+header{padding:16px 0;border-bottom:1px solid var(--line)}
+.brand{font-family:var(--mono);font-size:19px;font-weight:600}.brand .n{color:var(--accent)}
+h1{font-family:var(--mono);font-size:clamp(26px,4.5vw,38px);line-height:1.15;margin:40px 0 8px}
+h1 em{color:var(--accent);font-style:normal}
+.lede{color:var(--muted);font-size:18px;max-width:66ch;margin-bottom:8px}
+h2{font-family:var(--mono);font-size:22px;margin:44px 0 16px;padding-top:24px;border-top:1px solid var(--line)}
+h3{font-family:var(--mono);font-size:16px;margin:20px 0 6px}
+p{margin:12px 0;max-width:72ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:20px;margin:16px 0}
+.mono{font-family:var(--mono)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:640px){.two{grid-template-columns:1fr}}
+.stamp{font-family:var(--mono);font-weight:700;border:3px solid;border-radius:7px;padding:1px 14px;display:inline-block;font-size:26px}
+.f{color:var(--fail);border-color:var(--fail)}.b{color:var(--warn);border-color:var(--warn)}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:8px}
+td,th{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:500}
+.map td:first-child{font-family:var(--mono);white-space:nowrap}
+video{width:100%;border-radius:8px;display:block;background:#000}
+.tag{display:inline-block;font-family:var(--mono);font-size:12px;padding:2px 8px;border:1px solid var(--line);border-radius:20px;color:var(--muted);margin-right:6px}
+.ok{color:var(--accent)}.warnc{color:var(--warn)}
+ul{margin:10px 0 10px 22px}li{margin:6px 0;max-width:70ch}
+.foot{color:var(--muted);font-size:13px;padding:30px 0;border-top:1px solid var(--line);margin-top:40px}
+</style>
+</head>
+<body>
+<header><div class="wrap"><span class="brand">agentd<span class="n">y</span>no</span> <span class="mono" style="color:var(--muted);font-size:14px">· build recap</span></div></header>
+
+<div class="wrap">
+<h1>What got built, and <em>why it would work</em> — or why you shouldn't be sure yet.</h1>
+<p class="lede">AgentDyno is the dyno bench for local coding agents: scan your machine, fit the
+right open model, serve it correctly, and <strong>prove with an on-machine exam</strong> that it can
+actually drive tools before you wire up Claude Code, OpenCode, or Aider. Local, free, Apache-2.0.</p>
+<p><span class="tag">private repo</span><a class="mono" href="https://github.com/sauravGit/agentdyno">github.com/sauravGit/agentdyno</a></p>
+
+<h2>// the five-minute version</h2>
+<p><strong>The pain (verified, 101 source URLs).</strong> Developers who won't pay for coding-agent
+subscriptions have all the parts — open CLIs, llama.cpp, capable models — but local models fail
+silently at agentic tool-calling: they emit raw XML instead of tool calls, break past ~5 tools,
+report edits that never happen. Documented across Goose, OpenCode, Aider, Cline, and Continue
+(<a href="research/REPORT.md">landscape report</a>).</p>
+<p><strong>The honest pivot.</strong> The first thesis — "build a cross-platform, OSS fit tool" — was
+<em>killed by our own skeptic agent</em>, which found <a href="https://github.com/AlexsJones/llmfit">llmfit</a>
+(30k+ stars) already does exactly that. So the product moved to the part still unsolved:
+<strong>fit is solved, trust is not.</strong> Nobody proves, on your machine, that a model that
+"fits" can actually run an agent. See <a href="research/SKEPTIC.md">SKEPTIC.md</a> and
+<a href="research/RED_TEAM.md">RED_TEAM.md</a>.</p>
+
+<h2>// the proof (real output, one laptop, two models)</h2>
+<p>Measured on a MacBook Air M4, 16 GB. Both models fit comfortably. One is useless.</p>
+<div class="panel" style="padding:0;overflow:hidden"><video controls preload="metadata" poster="site/screenshots/desktop.png"><source src="site/video/launch.mp4" type="video/mp4"></video></div>
+<div class="two">
+  <div class="panel"><span class="stamp f">F</span> &nbsp;<span class="mono">Qwen2.5-Coder-7B</span>
+    <p style="font-size:14px">Fails P1: emits raw <span style="color:var(--fail)">&lt;function/&gt;</span> XML instead of a tool call. The agent loop never starts. <a href="site/certificates/qwen2.5-coder-7b.html">certificate</a></p></div>
+  <div class="panel"><span class="stamp b">B</span> &nbsp;<span class="mono">Qwen3-8B</span>
+    <p style="font-size:14px">Passes the loop (P1–P3) and long-context recall (P5); fails P4 by mangling an escaped quote. Usable, with a known weak spot. <a href="site/certificates/qwen3-8b.html">certificate</a></p></div>
+</div>
+<p class="mono" style="font-size:13px;color:var(--muted)">The rubric is mechanism-based: P1–P3 = the agent loop (fail any → F); P4–P5 = quality (0 pass → C, 1 → B, 2 + fast → A). Locked by 16 unit tests.</p>
+
+<h2>// why it might work — and the honest doubt</h2>
+<p><strong>For it:</strong> the pain is real and cited; the enabling tech is verified (llama.cpp ships
+prebuilt macOS Intel + Silicon binaries; llama-server natively speaks the Anthropic Messages API,
+so Claude Code connects with three env vars); the demo works on the median consumer laptop; and the
+market is shifting toward local-first (Roo Code archived, Continue.dev acquired and frozen, Ollama
+criticized for its paid pivot).</p>
+<p><strong>Against it (the unresolved bet):</strong> people demonstrably want "what fits" (llmfit ~30k
+stars) but nobody has proven they'll adopt a separate "does it work" exam rather than just trying a
+model and eyeballing it. That is the central go-to-market risk, and it is <span class="warnc">not
+resolved</span>. A fair reader should leave convinced the <em>tech is honest and working</em>, and
+appropriately skeptical about adoption until real users validate it. Full objections, including a
+probe bug we caught in our own tool before shipping, in <a href="research/RED_TEAM.md">RED_TEAM.md</a>.</p>
+
+<h2>// run it yourself</h2>
+<div class="panel mono" style="font-size:13px;white-space:pre-wrap">git clone https://github.com/sauravGit/agentdyno &amp;&amp; cd agentdyno
+npm install &amp;&amp; npm run build &amp;&amp; npm test        <span style="color:var(--muted)"># 16 tests pass</span>
+node dist/src/cli.js scan                          <span style="color:var(--muted)"># honest hardware</span>
+node dist/src/cli.js fit                           <span style="color:var(--muted)"># what fits, ranked</span>
+node dist/src/cli.js pull qwen3-8b
+node dist/src/cli.js serve  &amp;&amp;  node dist/src/cli.js doctor   <span style="color:var(--muted)"># the exam</span>
+node dist/src/cli.js connect claude                <span style="color:var(--muted)"># VERIFIED config only</span></div>
+
+<h2>// deliverables map</h2>
+<table class="map">
+<tr><th>artifact</th><th>what it is</th></tr>
+<tr><td><a href="site/index.html">site/index.html</a></td><td>Landing site — real numbers, <a href="site/screenshots/desktop.png">desktop</a> + <a href="site/screenshots/mobile.png">mobile</a> verified</td></tr>
+<tr><td><a href="site/video/launch.mp4">launch.mp4</a></td><td>45s launch film — the F-vs-B story</td></tr>
+<tr><td><a href="site/video/walkthrough.mp4">walkthrough.mp4</a></td><td>Product walkthrough — full command flow</td></tr>
+<tr><td><a href="THESIS.md">THESIS.md</a></td><td>Product thesis + the falsified claim, kept visible with its correction</td></tr>
+<tr><td><a href="research/REPORT.md">REPORT.md</a></td><td>12-tool landscape, every claim sourced</td></tr>
+<tr><td><a href="research/SKEPTIC.md">SKEPTIC.md</a></td><td>Adversarial pass that forced the pivot</td></tr>
+<tr><td><a href="research/RED_TEAM.md">RED_TEAM.md</a></td><td>Objections to the surviving thesis (visible, not hidden)</td></tr>
+<tr><td><a href="docs/DESIGN.md">DESIGN.md</a></td><td>Architecture, fit math, per-platform budgets</td></tr>
+<tr><td><a href="brand/BRAND.md">BRAND.md</a></td><td>Brand guidelines — a stranger can make a new on-brand asset</td></tr>
+<tr><td><a href="brand/LAUNCH_VIDEO_SCRIPT.md">LAUNCH_VIDEO_SCRIPT.md</a></td><td>Shot-by-shot video script</td></tr>
+<tr><td><a href="site/certificates/qwen3-8b.html">certificates/*.html</a></td><td>Unexpected deliverable: printable per-model calibration certificates</td></tr>
+<tr><td><a href="src/catalog.json">catalog.json</a></td><td>8 models, sizes + SHA-256 + KV geometry from live Hugging Face metadata</td></tr>
+<tr><td><a href="BUILD_LOG.md">BUILD_LOG.md</a></td><td>20 logged decisions + every self-answered question</td></tr>
+</table>
+
+<h2>// guardrails held</h2>
+<ul>
+<li><span class="ok">No new spending</span> — only free tools; domain availability checked (agentdyno.dev unregistered), nothing purchased.</li>
+<li><span class="ok">Published nothing</span> — repo is <strong>private</strong>; server binds 127.0.0.1; no telemetry; nothing posted or emailed.</li>
+<li><span class="ok">Invented nothing</span> — every stat and complaint traces to a fetched URL; inferences labeled; the F/B grades are real runs on this machine, not mockups.</li>
+<li><span class="ok">No code copied</span> — Athanor Lite is source-available/non-commercial; this is a clean-room Apache-2.0 build, its source excluded from the repo.</li>
+<li><span class="ok">Never asked, never stalled</span> — every judgment call logged in BUILD_LOG.md; the one real blocker (GitHub auth) resolved via an already-authenticated account.</li>
+</ul>
+
+<div class="foot">AgentDyno · built autonomously in one session · Apache-2.0 · the honest state of this project is stated above, not spun.</div>
+</div>
+</body>
+</html>

@@ -16,10 +16,11 @@
   :root{--bg:#F7F9FA;--surface:#FFFFFF;--line:#DCE3EA;--text:#14181D;--muted:#5A6673;--accent:#1E9E68}
 }
 *{margin:0;padding:0;box-sizing:border-box}
+html,body{overflow-x:hidden;max-width:100%}
 body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5}
 a{color:var(--accent);text-decoration:none}
 a:hover{text-decoration:underline}
-.wrap{max-width:960px;margin:0 auto;padding:0 20px}
+.wrap{max-width:960px;width:100%;margin:0 auto;padding:0 20px}
 header{padding:18px 0;border-bottom:1px solid var(--line)}
 .brand{font-family:var(--mono);font-size:20px;font-weight:600}
 .brand .needle{color:var(--accent)}
@@ -66,6 +67,17 @@ footer .links{margin-bottom:10px}
   <p class="notice">Local, free, open source. No account, no telemetry, no paid tier — the
   entire category exists because people are done with subscriptions.</p>
 </div>
+
+<section>
+  <h2>// watch</h2>
+  <div class="panel" style="padding:0;overflow:hidden">
+    <video controls preload="metadata" poster="screenshots/desktop.png" style="width:100%;display:block;background:#0B0E11">
+      <source src="video/launch.mp4" type="video/mp4">
+    </video>
+  </div>
+  <p class="notice">45-second launch film — real output, one laptop, two models.
+  Also: <a href="video/walkthrough.mp4">the full product walkthrough</a> (scan → fit → pull → serve → doctor → connect).</p>
+</section>
 
 <section>
   <h2>// the problem</h2>
