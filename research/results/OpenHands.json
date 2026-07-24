@@ -1,0 +1,34 @@
+{
+  "name": "OpenHands (formerly OpenDevin)",
+  "category": "agentic-cli",
+  "url": "https://github.com/OpenHands/OpenHands",
+  "license": "MIT License (true open source). Note: the GitHub org was previously All-Hands-AI/OpenHands and now redirects to OpenHands/OpenHands.",
+  "pricing": "Core platform is free and self-hostable. All Hands AI also offers a paid managed OpenHands Cloud with usage-based/credit pricing; running fully local against your own models is free apart from your own compute/API costs.",
+  "platforms": "Cross-platform via Docker (Linux, macOS incl. Apple Silicon, Windows via WSL2). Runs the agent runtime in a Docker sandbox container; also available as a CLI and a VS Code-style web UI. GPU only needed if you serve a local model on the same machine.",
+  "local_model_support": "Connects to any OpenAI-compatible endpoint via LiteLLM. Documented local paths include Ollama, LM Studio, vLLM, and SGLang. As of 2026 the docs recommend an open-weight MoE model (e.g. Qwen3.x ~30B-class) as the first local model; All Hands also ships OpenHands LM 32B (runnable on a single 24GB GPU like a 3090). Requires custom model name + base_url + a (often dummy) API key.",
+  "hardware_awareness": "None built in. OpenHands does not detect your GPU/VRAM or recommend a model that fits your machine. Model selection is entirely manual; docs give rough guidance (>=8GB RAM if using cloud APIs; GPU recommended for local models) but the app performs no honest memory-fit math.",
+  "agentic_coding_features": "Full autonomous agent: reads/edits files, runs shell commands in a sandboxed runtime, browses the web, writes and runs code, does multi-file refactors, and opens pull requests. Supports MCP servers/tools, a CLI headless mode, a web GUI, and GitHub/GitLab integrations. Micro-agents and custom agent configs supported.",
+  "claude_code_compat": "Not a Claude Code drop-in and does not expose an ANTHROPIC_BASE_URL bridge. It is its own agent. It can USE Anthropic Claude models (and any provider) through LiteLLM, and can point at local OpenAI-compatible servers, but it does not act as or emulate the Claude Code CLI. [uncertain]",
+  "popularity": "~82,000 GitHub stars, ~10,500 forks, ~134 open issues (github.com/OpenHands/OpenHands, fetched 2026-07-24). One of the most-starred OSS coding-agent projects; All Hands AI raised an $18.8M Series A.",
+  "pain_points": [
+    "Local models are dramatically slower through OpenHands than standalone: 'When I run it with openDevin, the request and response are extremely slow and I get devin output every 30 minutes!' (llama2 was fast via `ollama run llama2` directly) - https://github.com/OpenHands/OpenHands/issues/1253",
+    "Slow local models trip the default timeout with no useful feedback: 'long generations from local models can exceed the default timeout. This causes OpenHands to disconnect before the response is ready, resulting in a loop of retry attempts with no clear explanation or feedback.' - https://github.com/OpenHands/OpenHands/issues/8768",
+    "Local/timeout failures manifest as opaque LiteLLM errors: '[Bug]: Using local OpenHands model requests timeout \"litellm.exceptions.Timeout: litellm.Timeout: APITimeoutError\"' - https://github.com/OpenHands/OpenHands/issues/7716",
+    "Users repeatedly struggle to get any local LLM working well and find small models too weak for the agent loop (thread of people trying many local models) - https://github.com/OpenHands/OpenHands/issues/1336 and https://github.com/OpenHands/OpenHands/issues/6918"
+  ],
+  "gap_vs_vision": "OpenHands nails the agentic-coding half but leaves the 'hardware-aware, works-on-my-machine' half entirely to the user: no GPU/VRAM detection, no honest fit math, no curated 'this model runs on your box' recommendation. Getting a good local experience requires a beefy GPU (24GB+ for the 32B model) and manual endpoint wiring; small models produce poor results and timeouts. It is powerful but not a turnkey 'local Claude Code for everyone, no subscription' on modest hardware.",
+  "sources": [
+    "https://github.com/OpenHands/OpenHands",
+    "https://docs.openhands.dev/openhands/usage/llms/local-llms",
+    "https://github.com/OpenHands/OpenHands/issues/1253",
+    "https://github.com/OpenHands/OpenHands/issues/8768",
+    "https://github.com/OpenHands/OpenHands/issues/7716",
+    "https://github.com/OpenHands/OpenHands/issues/1336",
+    "https://github.com/OpenHands/OpenHands/issues/6918",
+    "https://huggingface.co/OpenHands/openhands-lm-32b-v0.1",
+    "https://dev.to/udiko/how-to-run-openhands-with-a-local-llm-using-lm-studio-41j6"
+  ],
+  "uncertain": [
+    "claude_code_compat"
+  ]
+}

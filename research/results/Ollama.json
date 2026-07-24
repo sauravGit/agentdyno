@@ -1,0 +1,43 @@
+{
+  "name": "Ollama",
+  "category": "local-runtime",
+  "url": "https://github.com/ollama/ollama",
+  "license": "MIT License (SPDX: MIT). The local runtime is genuinely open source; the newer Ollama Cloud/Turbo hosted-inference service is a proprietary paid backend layered on top.",
+  "pricing": "Local use is free. Ollama Cloud (Turbo) adds a hosted-inference subscription with fixed tiers: Free $0, Pro $20/month (or $200/year), Max $100/month. Higher tiers add larger cloud models, more concurrency, and higher usage caps. Launched in preview August 2025.",
+  "platforms": "macOS (Apple Silicon and Intel), Windows, Linux; official Docker image. GPU acceleration via Metal (macOS), CUDA (NVIDIA), ROCm/Vulkan (AMD), and experimental Intel iGPU/Vulkan.",
+  "local_model_support": "Runs open-weight GGUF models pulled from the Ollama model library (Llama, Gemma, DeepSeek, Qwen, gpt-oss, etc.). Historically wraps llama.cpp; has been adding its own inference engine. Exposes a native REST API plus an OpenAI-compatible /v1 endpoint (/v1/chat/completions). Can also proxy to hosted models via Ollama Cloud.",
+  "hardware_awareness": "[uncertain] Partial and criticized as unreliable. Ollama detects GPU/VRAM and decides how many layers to offload, but there is no feature that tells a user which models actually fit their machine before pulling. Users report inaccurate memory estimation (over-reporting free VRAM, silent CPU offloading, OOM crashes). A community-proposed `ollama fit` subcommand to rank models by hardware compatibility is still an open, unimplemented request (issue #14771).",
+  "agentic_coding_features": "No built-in agentic coding, file editing, or terminal-execution features of its own. It functions purely as a model server/backend; agentic capabilities come from external clients (Cline, Continue, OpenClaw, Open WebUI, aider, etc.) that call its API. No native MCP host, no VS Code extension shipped by the project itself.",
+  "claude_code_compat": "[uncertain] Ollama exposes an OpenAI-compatible API rather than a native Anthropic API, so acting as a Claude Code backend requires an OpenAI-to-Anthropic bridge/router (e.g. setting ANTHROPIC_BASE_URL to a proxy). Ollama actively markets Cloud for agentic-CLI workloads, noting 'you won't wake up to surprise overage bills if you leave Claude Code or OpenClaw running,' but no first-party native Anthropic-format endpoint is documented.",
+  "popularity": "~176.8k GitHub stars (https://github.com/ollama/ollama, observed 2026-07). One of the most-starred local-LLM projects on GitHub.",
+  "pain_points": [
+    {
+      "complaint": "No hardware-aware guidance: 'A new Ollama user faces a blank prompt with no guidance on which model to run,' leading to 'Out-of-memory crashes when VRAM is insufficient' and 'Multi-minute load times from unexpected CPU offloading.' The reporter summarizes: 'There is currently no way to ask Ollama what can my machine actually run?' (open feature request for `ollama fit`).",
+      "url": "https://github.com/ollama/ollama/issues/14771"
+    },
+    {
+      "complaint": "Memory is not released: 'all models across the board run out of memory eventually as if they we're not freeing it after generation,' persisting even in versions where a specific model fix was supposedly applied.",
+      "url": "https://github.com/ollama/ollama/issues/10114"
+    },
+    {
+      "complaint": "Inaccurate hardware/memory detection: 'Even though I have >1GB VRAM used by other applications (i.e. desktop environment, browser), ollama reports that the memory is almost unused,' causing 'graph_reserve: failed to allocate compute buffers' crashes unless the user manually pads ~3GB of overhead.",
+      "url": "https://github.com/ollama/ollama/issues/13018"
+    },
+    {
+      "complaint": "Community debate over the pivot to a paid Turbo cloud service, with users arguing it undercuts Ollama's local-first identity and pushes hosted/subscription usage.",
+      "url": "https://biggo.com/news/202508060113_Ollama_Launches_Turbo_Cloud_Service"
+    }
+  ],
+  "gap_vs_vision": "Does not deliver 'hardware-aware local Claude Code for everyone, no subscription.' It has no built-in agentic coding (relies on third-party clients), no honest/automatic hardware-fit recommendation (the `fit` capability is only a proposal and memory estimation is frequently wrong), is not natively Anthropic/Claude Code compatible (needs a proxy), and its strategic direction is now steering users toward a paid cloud subscription rather than optimizing the free local experience.",
+  "sources": [
+    "https://github.com/ollama/ollama",
+    "https://github.com/ollama/ollama/issues/14771",
+    "https://github.com/ollama/ollama/issues/10114",
+    "https://github.com/ollama/ollama/issues/13018",
+    "https://biggo.com/news/202508060113_Ollama_Launches_Turbo_Cloud_Service",
+    "https://x.com/ollama/status/2032744932633620611",
+    "https://aimec.io/what-is-ollama-cloud-how-it-works/",
+    "https://www.infralovers.com/blog/2025-08-13-ollama-2025-updates/"
+  ],
+  "uncertain": ["hardware_awareness", "claude_code_compat"]
+}

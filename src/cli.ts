@@ -1,0 +1,190 @@
+#!/usr/bin/env node
+// magix-box CLI — mb <command>
+
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { HOME, MODELS_DIR, ensureDirs, findModel, loadCatalog } from "./catalog.js";
+import { DEFAULT_CONTEXT, rankFits } from "./fit.js";
+import { connectAider, connectClaude, connectOpencode } from "./connect.js";
+import { runExam, type ExamReport } from "./probes.js";
+import { pullModel, pullRuntime } from "./pull.js";
+import { formatBytes, scanHardware } from "./scan.js";
+import { readState, startServer, stopServer } from "./serve.js";
+
+const REPORTS_DIR = join(HOME, "reports");
+
+function arg(flag: string): string | null {
+  const i = process.argv.indexOf(flag);
+  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : null;
+}
+const has = (flag: string) => process.argv.includes(flag);
+
+const MODE_LABEL: Record<string, string> = {
+  comfortable: "comfortable",
+  tight: "tight",
+  "partial-offload": "gpu+cpu split",
+  "cpu-only": "cpu only",
+  "wont-fit": "won't fit",
+};
+
+async function cmdScan() {
+  const hw = scanHardware(MODELS_DIR);
+  if (has("--json")) return console.log(JSON.stringify(hw, null, 2));
+  console.log(`machine   ${hw.cpuBrand} (${hw.arch}), ${hw.cores} cores`);
+  console.log(`memory    ${formatBytes(hw.ramBytes)} RAM`);
+  console.log(`accel     ${hw.accel}${hw.gpuName ? ` — ${hw.gpuName}` : ""}`);
+  console.log(`budgets   gpu ${formatBytes(hw.gpuBudgetBytes)} | cpu ${formatBytes(hw.ramBudgetBytes)}`);
+  console.log(`disk      ${formatBytes(hw.diskFreeBytes)} free`);
+  for (const n of hw.notes) console.log(`note      ${n}`);
+}
+
+async function cmdFit() {
+  const context = Number(arg("--context") ?? DEFAULT_CONTEXT);
+  const hw = scanHardware(MODELS_DIR);
+  const fits = rankFits(loadCatalog(), hw, context);
+  if (has("--json")) return console.log(JSON.stringify(fits, null, 2));
+  console.log(`fit verdicts at ${context} tokens of context (gpu budget ${formatBytes(hw.gpuBudgetBytes)}):\n`);
+  console.log("model                                quant    need      verdict        max-ctx  tools");
+  for (const f of fits) {
+    const name = `${f.model.displayName}`.padEnd(36);
+    const quant = f.quant.quant.padEnd(8);
+    const need = formatBytes(f.needBytes).padEnd(9);
+    const mode = MODE_LABEL[f.mode].padEnd(14);
+    const ctx = String(f.maxComfortableContext).padEnd(8);
+    console.log(`${name} ${quant} ${need} ${mode} ${ctx} ${f.model.toolCallGrade}`);
+  }
+  console.log("\ntools column: catalog grade for tool-calling (A best). Run mb doctor to VERIFY on this machine.");
+}
+
+async function cmdPull() {
+  if (has("--runtime")) return void (await pullRuntime());
+  const id = process.argv[3];
+  if (!id) throw new Error("usage: mb pull <model-id> [--quant Q4_K_M] | mb pull --runtime");
+  const models = loadCatalog();
+  const m = findModel(models, id);
+  const qname = arg("--quant");
+  const q = qname ? m.quants.find((x) => x.quant === qname) : m.quants[0];
+  if (!q) throw new Error(`no quant ${qname} for ${m.id} (have ${m.quants.map((x) => x.quant).join(", ")})`);
+  await pullRuntime();
+  await pullModel(m, q);
+}
+
+async function cmdServe() {
+  if (has("--stop")) {
+    console.log(stopServer() ? "server stopped" : "no server running");
+    return;
+  }
+  const hw = scanHardware(MODELS_DIR);
+  const models = loadCatalog();
+  const id = process.argv[3] && !process.argv[3].startsWith("--") ? process.argv[3] : null;
+  const context = arg("--context") ? Number(arg("--context")) : undefined;
+  const fits = rankFits(models, hw, context ?? DEFAULT_CONTEXT).filter((f) =>
+    existsSync(join(MODELS_DIR, f.quant.filename))
+  );
+  const pick = id ? fits.find((f) => f.model.id === findModel(models, id).id) : fits[0];
+  if (!pick) throw new Error(id ? `model ${id} not downloaded (mb pull ${id})` : "no downloaded models; run mb pull <model>");
+  console.log(`starting ${pick.model.displayName} ${pick.quant.quant} (${MODE_LABEL[pick.mode]}, ctx ${context ?? pick.maxComfortableContext})...`);
+  const s = await startServer(pick, hw, { context });
+  console.log(`ready: http://127.0.0.1:${s.port} (pid ${s.pid}, context ${s.context})`);
+  console.log(`endpoints: OpenAI /v1/chat/completions | Anthropic /v1/messages`);
+}
+
+function saveReport(r: ExamReport) {
+  mkdirSync(REPORTS_DIR, { recursive: true });
+  writeFileSync(join(REPORTS_DIR, `${r.modelId}.json`), JSON.stringify(r, null, 2));
+}
+
+export function loadReport(modelId: string): ExamReport | null {
+  const p = join(REPORTS_DIR, `${modelId}.json`);
+  return existsSync(p) ? (JSON.parse(readFileSync(p, "utf8")) as ExamReport) : null;
+}
+
+async function cmdDoctor() {
+  const s = readState();
+  if (!s) throw new Error("no server running; run mb serve first (doctor examines the LIVE server)");
+  console.log(`examining ${s.modelId} at context ${s.context} — 5 probes, ~1-3 min on laptop hardware\n`);
+  const report = await runExam(s.modelId, s.context);
+  for (const r of report.results) {
+    const mark = r.pass ? "PASS" : "FAIL";
+    const speed = r.tokensPerSec ? ` ${r.tokensPerSec.toFixed(1)} tok/s` : "";
+    console.log(`${r.id}  ${mark}  ${r.name.padEnd(26)} ${(r.ms / 1000).toFixed(1)}s${speed}  ${r.detail}`);
+  }
+  console.log(`\ngrade: ${report.grade}` + (report.genTokensPerSec ? `   generation: ${report.genTokensPerSec.toFixed(1)} tok/s` : ""));
+  const meaning: Record<string, string> = {
+    A: "agent-ready on this machine at this context",
+    B: "usable for agentic coding; long-context recall or speed is limited",
+    C: "unreliable for agents — chat use only",
+    F: "cannot drive tools; do not wire an agent to this",
+  };
+  console.log(`meaning: ${meaning[report.grade]}`);
+  saveReport(report);
+  console.log(`report saved: ${join(REPORTS_DIR, `${report.modelId}.json`)}`);
+}
+
+async function cmdConnect() {
+  const target = process.argv[3];
+  const s = readState();
+  if (!s) throw new Error("no server running; run mb serve first");
+  const m = findModel(loadCatalog(), s.modelId);
+  const report = loadReport(s.modelId);
+  if (!report) {
+    console.log("WARNING: this model has not passed mb doctor on this machine — config below is UNVERIFIED\n");
+  } else {
+    console.log(`verified: grade ${report.grade} on this machine (${new Date(report.when).toLocaleString()})\n`);
+    if (report.grade === "C" || report.grade === "F") {
+      console.log("WARNING: doctor grade is below agent-ready; expect silent failures. Try a bigger/graded-A model.\n");
+    }
+  }
+  if (target === "claude") console.log(connectClaude(m));
+  else if (target === "opencode") console.log(connectOpencode(m));
+  else if (target === "aider") console.log(connectAider(m));
+  else throw new Error("usage: mb connect <claude|opencode|aider>");
+}
+
+async function cmdStatus() {
+  const s = readState();
+  if (!s) return console.log("server: not running");
+  const m = findModel(loadCatalog(), s.modelId);
+  const report = loadReport(s.modelId);
+  console.log(`server: running (pid ${s.pid}) — ${m.displayName}, context ${s.context}`);
+  console.log(`doctor: ${report ? `grade ${report.grade} (${report.when})` : "not yet examined"}`);
+}
+
+const HELP = `magix-box — prove your machine can run a coding agent, then wire it up.
+
+usage: mb <command>
+
+  scan                     honest hardware report (--json)
+  fit [--context N]        which models fit THIS machine, ranked (--json)
+  pull <model> [--quant Q] download model + runtime (resumable, sha256-verified)
+  pull --runtime           download just the llama.cpp runtime
+  serve [<model>] [--context N] [--stop]   run the local server (Anthropic+OpenAI APIs)
+  doctor                   the agentic readiness exam: 5 probes, grade A-F
+  connect <claude|opencode|aider>          wire an agent to the VERIFIED local server
+  status                   server + verification status
+
+Local, free, no accounts, no telemetry. Apache-2.0.`;
+
+async function main() {
+  ensureDirs();
+  const cmd = process.argv[2];
+  const table: Record<string, () => Promise<void>> = {
+    scan: cmdScan,
+    fit: cmdFit,
+    pull: cmdPull,
+    serve: cmdServe,
+    doctor: cmdDoctor,
+    connect: cmdConnect,
+    status: cmdStatus,
+  };
+  if (!cmd || !table[cmd]) {
+    console.log(HELP);
+    process.exit(cmd ? 1 : 0);
+  }
+  await table[cmd]();
+}
+
+main().catch((e) => {
+  console.error("error:", (e as Error).message);
+  process.exit(1);
+});

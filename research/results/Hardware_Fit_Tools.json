@@ -1,0 +1,34 @@
+{
+  "name": "Hardware-aware model fit tools (canirunthisllm.net, CanItRun.dev, VRAM calculators, Apple MLX / mlx-lm, Hugging Face hardware filters)",
+  "category": "model-manager",
+  "url": "https://www.canirunthisllm.net/",
+  "license": "Mixed across the category. canirunthisllm.net / CanItRun.dev are free hosted web tools (proprietary/closed site code). Apple MLX and mlx-lm are true open source (MIT, github.com/ml-explore/mlx, github.com/ml-explore/mlx-lm). Community VRAM calculators on Hugging Face Spaces (e.g. NyxKrage LLM-Model-VRAM-Calculator) are typically MIT/Apache open source. Hugging Face hardware filters are part of the (proprietary) HF Hub site.",
+  "pricing": "All free. Web calculators are free-to-use hosted sites; MLX/mlx-lm and the HF Spaces calculators are free open source; HF Hub browsing/filtering is free. No subscriptions.",
+  "platforms": "Web calculators are browser-based (any OS). They MODEL many targets: NVIDIA/AMD/Intel GPUs and Apple Silicon unified memory. Apple MLX / mlx-lm is macOS Apple-Silicon-only (M-series). HF hardware filters are web-based.",
+  "local_model_support": "These are estimators/enablers, not runtimes (except MLX). canirunthisllm.net and CanItRun.dev tell you which open-weight LLMs and quant levels fit your VRAM/RAM and give tokens/sec + benchmark estimates. mlx-lm actually RUNS models on Apple Silicon and exposes an OpenAI-compatible server (mlx_lm.server) that Aider, Continue, Claude Code, etc. can point at. HF filters help you find models by size/library.",
+  "hardware_awareness": "This IS the category's whole point, but honesty/automation varies. The web calculators require you to MANUALLY enter GPU/VRAM and model/quant/context; they estimate memory but are widely reported to be inaccurate at the edges (over- or under-estimating, especially KV-cache/context and training overhead). None auto-detect your actual hardware. Apple MLX has no fit-recommendation UI (you pick the model). By contrast the closest auto-detecting fit tool is Athanor Lite (separate item), which reads real GPU/VRAM and gives per-quant verdicts.",
+  "agentic_coding_features": "Essentially none across the pure fit tools. Calculators output numbers/verdicts only. mlx-lm provides the model server but no agent; agentic coding requires bolting on a separate tool (Aider/Continue/Claude Code/OpenHands) that the user must install and wire up. Some community MLX setups (e.g. navikt/mlx-workspace) script a local server + connect coding tools, but they assume you already chose a fitting model and do not do the fit math.",
+  "claude_code_compat": "Indirect only. mlx-lm and llama.cpp expose OpenAI-compatible endpoints that Claude Code (via ANTHROPIC_BASE_URL / an Anthropic-compatible proxy) or other agents can target, but the fit tools themselves do not bridge to Claude Code. No calculator sets ANTHROPIC_BASE_URL or configures an agent for you. [uncertain]",
+  "popularity": "Category is popular but fragmented. Apple MLX has strong traction (mlx and mlx-lm are widely used, tens of thousands of combined GitHub stars). VRAM calculators circulate heavily on r/LocalLLaMA and Hacker News (e.g. HN thread news.ycombinator.com/item?id=44676961). Individual web tools (canirunthisllm.net, CanItRun.dev) have no published user counts. [uncertain]",
+  "pain_points": [
+    "VRAM calculators are widely distrusted as inaccurate: an HN commenter noted a calculator claimed a 3.77B model needs 62GB to train, yet they had trained a 14B model on 24GB with optimizations - https://news.ycombinator.com/item?id=44676961",
+    "Context/KV-cache memory is poorly modeled: users question why calculators report huge VRAM for context on some models vs others and get numbers that don't match reality - https://huggingface.co/deepseek-ai/deepseek-coder-6.7b-instruct/discussions/18",
+    "The tools stop at 'a number' and don't get you running: CanItRun.dev is explicitly 'strictly an informational resource for hardware-model matching' and does not set up or launch anything - https://canitrun.dev/"
+  ],
+  "gap_vs_vision": "This is the core gap the vision targets. As of mid-2026, NO tool combines honest, auto-detected hardware fit-math WITH one-command agentic coding setup. The fit calculators (canirunthisllm.net, CanItRun.dev, HF calculators) require manual specs, are often inaccurate, and end at a verdict. Apple MLX/mlx-lm runs models and serves an OpenAI-compatible API but offers no fit recommendation and no agent. Athanor Lite does auto-detected fit-math + one-click chat but no coding agent and is Windows-only/source-available. OpenHands/Aider/Claude Code do agentic coding but have zero hardware awareness. Nobody closes the loop: detect hardware -> recommend a model that truly fits -> auto-configure a working local agentic coding agent, free and no subscription.",
+  "sources": [
+    "https://www.canirunthisllm.net/",
+    "https://canitrun.dev/",
+    "https://huggingface.co/spaces/NyxKrage/LLM-Model-VRAM-Calculator",
+    "https://apxml.com/tools/vram-calculator",
+    "https://news.ycombinator.com/item?id=44676961",
+    "https://huggingface.co/deepseek-ai/deepseek-coder-6.7b-instruct/discussions/18",
+    "https://github.com/navikt/mlx-workspace",
+    "https://developer.apple.com/videos/play/wwdc2026/232/",
+    "https://dev.to/brunocerberus/running-local-llms-on-apple-silicon-2ecm"
+  ],
+  "uncertain": [
+    "claude_code_compat",
+    "popularity"
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "name": "claude-code-router (and Claude Code with local models via ANTHROPIC_BASE_URL / y-router / LiteLLM)",
+  "category": "bridge/router",
+  "url": "https://github.com/musistudio/claude-code-router",
+  "license": "claude-code-router: MIT (open source). Related: LiteLLM is MIT; y-router (Cloudflare Worker) is open source. Claude Code itself is proprietary (Anthropic Commercial Terms). [uncertain] exact license of every related y-router fork.",
+  "pricing": "Router software is free/open source. No subscription for the router. You still supply backends: local models are free; cloud backends (OpenRouter, DeepSeek, etc.) are pay-per-token. Claude Code CLI is free to install; pointing it at a non-Anthropic backend means you are not consuming an Anthropic subscription for those calls.",
+  "platforms": "claude-code-router: macOS (Apple Silicon + Intel), Windows, Linux; CLI via npm (Node.js 22+) and Docker. As a router it runs anywhere Node/Docker runs. Claude Code CLI itself: macOS, Linux, Windows (WSL).",
+  "local_model_support": "The general pattern points Claude Code at a local backend three ways: (1) Native Anthropic Messages API endpoints -- Ollama (>=v0.14.0, announced 2026-01-16) and LM Studio (>=0.4.1) now expose an Anthropic-compatible local endpoint, and llama.cpp added POST /v1/messages; set ANTHROPIC_BASE_URL to the local port, no proxy needed. (2) A translating proxy -- claude-code-router, LiteLLM, or y-router converts Anthropic Messages <-> OpenAI-compatible so any local OpenAI server (llama.cpp, vLLM, Ollama) works. (3) claude-code-router as a control plane routing across many providers. [uncertain] claude-code-router's README emphasizes cloud providers; local Ollama/llama.cpp work but via custom OpenAI-compatible provider config rather than a first-class 'local' UI.",
+  "hardware_awareness": "None. Routers/bridges do no hardware detection and give no memory-fit model recommendations -- they are pure request plumbing. Whether a model fits VRAM/RAM is entirely the user's responsibility on the backing inference server. Community guidance repeatedly notes 32K context is the floor and 64K the sweet spot for Claude-Code-style agentic use, but nothing enforces or recommends this automatically.",
+  "agentic_coding_features": "Inherits all of Claude Code's agentic features (file edit, terminal execution, multi-file work, MCP, subagents) because Claude Code remains the front end -- the router only swaps the model backend. The hard part is tool-call fidelity: Claude Code emits Anthropic-format tool_use blocks that must be translated to/from the backend's tool schema, and local models frequently ignore tools or emit malformed calls. LiteLLM/claude-code-router can inject tool definitions into prompts for models lacking native tool support (issue #685).",
+  "claude_code_compat": "This IS the Claude-Code-compat category. Works by setting ANTHROPIC_BASE_URL (and ANTHROPIC_AUTH_TOKEN) so Claude Code talks to a local/proxy endpoint speaking the Anthropic Messages API. ToS consideration: users have formally asked Anthropic whether ANTHROPIC_BASE_URL to non-Anthropic models, and publishing adapters that do so, is permitted (claude-code issue #5577); the issue was closed with no clear public affirmative answer captured. Claude Code is governed by Anthropic's Commercial Terms; nothing in Consumer/Commercial Terms or AUP explicitly prohibits using Claude alongside other models, the main stated restriction being not using Claude output to train a competing model -- but permission to route the client to third-party backends is not officially confirmed. [uncertain] official Anthropic stance.",
+  "popularity": "claude-code-router ~36.2k GitHub stars (fetched from https://github.com/musistudio/claude-code-router, 2026-07). [uncertain] live count; related LiteLLM/y-router have separate large followings.",
+  "pain_points": [
+    {
+      "quote": "Issue with local Ollama (gpt-oss:20b) -- model called but not using tools: 'the model responds, but completely ignores tool calls (as if they were not available or it can't invoke them),' despite receiving tool definitions in requests.",
+      "url": "https://github.com/musistudio/claude-code-router/issues/790"
+    },
+    {
+      "quote": "Runtime error that the local LLM does not support tools -- 'registry.ollama.ai/library/codeqwen:latest does not support tools' -- when trying to use a single local model with ccr.",
+      "url": "https://github.com/musistudio/claude-code-router/issues/121"
+    },
+    {
+      "quote": "Feature request to 'add support for simulating tool calling capability by injecting tool definitions into prompts for non-tool calling models' (like LiteLLM), because many local models lack native tool calling and break Claude Code's agent loop.",
+      "url": "https://github.com/musistudio/claude-code-router/issues/685"
+    },
+    {
+      "quote": "Users formally asked whether it is 'permissible under Anthropic's ToS to use the ANTHROPIC_BASE_URL environment variable to route SDK/API requests to custom models... and publish adapters or code on GitHub that enables others to use ANTHROPIC_BASE_URL to connect to non-Anthropic models' -- issue closed with no clear public affirmative answer.",
+      "url": "https://github.com/anthropics/claude-code/issues/5577"
+    }
+  ],
+  "gap_vs_vision": "Closest architecture to 'local Claude Code without subscription,' but still not the full vision. Zero hardware awareness -- no detection or model-fit recommendation; the user must size models to their machine manually. Tool-call fidelity with local models is the dominant failure mode: local models ignore or malform Anthropic-style tool_use, breaking multi-step agentic tasks, so prompt-injection shims are needed. Setup (env vars, proxy config, per-provider transformers) is non-trivial for non-experts. And there is unresolved Terms-of-Service ambiguity about routing Claude Code to non-Anthropic backends, which is a legal/adoption risk the vision would need to clear.",
+  "sources": [
+    "https://github.com/musistudio/claude-code-router",
+    "https://github.com/musistudio/claude-code-router/issues/790",
+    "https://github.com/musistudio/claude-code-router/issues/121",
+    "https://github.com/musistudio/claude-code-router/issues/685",
+    "https://github.com/anthropics/claude-code/issues/5577",
+    "https://code.claude.com/docs/en/legal-and-compliance",
+    "https://huggingface.co/blog/ggml-org/anthropic-messages-api-in-llamacpp",
+    "https://renezander.com/guides/claude-code-local-llm-anthropic-base-url/",
+    "https://www.kdnuggets.com/pairing-claude-code-with-local-models"
+  ],
+  "uncertain": [
+    "license",
+    "local_model_support",
+    "claude_code_compat",
+    "popularity"
+  ]
+}

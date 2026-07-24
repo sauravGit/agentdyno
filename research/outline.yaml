@@ -1,0 +1,46 @@
+topic: local-llm-coding-agents
+description: >
+  Landscape research for building an open-source, hardware-aware, local-first
+  "Claude Code for any open model" (macOS Intel/Silicon first), inspired by
+  BBALabs/athanor-lite but cross-platform and truly OSS.
+execution:
+  output_dir: ./results
+  batch_size: 4
+  items_per_agent: 3
+items:
+  - name: Ollama
+    category: local-runtime
+    description: Most popular local model runtime; CLI + API; recently added cloud/paid features. Investigate hardware-awareness gaps and user complaints.
+  - name: LM Studio
+    category: desktop-app
+    description: Closed-source desktop app for local models with model search and OpenAI-compatible server. Investigate licensing, macOS support, complaints.
+  - name: llama.cpp / llama-server
+    category: local-runtime
+    description: Core inference engine; GGUF; Metal support on macOS. Investigate llama-server API compatibility (OpenAI-compatible endpoints) and usability pain.
+  - name: Aider
+    category: agentic-cli
+    description: OSS AI pair-programming CLI; supports local models via Ollama/OpenAI-compatible. Investigate local-model experience and complaints.
+  - name: OpenCode (sst/opencode)
+    category: agentic-cli
+    description: OSS Claude-Code-like TUI agent supporting many providers including local. Investigate maturity, local-model support, complaints.
+  - name: Goose (Block)
+    category: agentic-cli
+    description: OSS agent by Block; MCP-native. Investigate local model support and pain points.
+  - name: Cline / Roo Code
+    category: ide-extension
+    description: VS Code agentic extensions; support local models via Ollama/OpenAI-compatible. Investigate local-model experience (context length, tool-call reliability) complaints.
+  - name: Continue.dev
+    category: ide-extension
+    description: OSS VS Code/JetBrains assistant with local model support. Investigate hardware-awareness and complaints.
+  - name: claude-code-router / Claude Code with local models
+    category: bridge/router
+    description: Projects that point Claude Code at other backends (ANTHROPIC_BASE_URL, musistudio/claude-code-router, y-router, LiteLLM proxy). Investigate what works with local models, tool-calling fidelity, complaints. Also check Anthropic ToS considerations.
+  - name: OpenHands (formerly OpenDevin)
+    category: agentic-cli
+    description: OSS autonomous dev agent. Investigate local model support, hardware requirements, complaints.
+  - name: Athanor Lite (BBALabs)
+    category: model-manager
+    description: The inspiration repo. Verify license terms, Windows-only status, feature set, any community traction. Note it is source-available, not OSS.
+  - name: Hardware-aware model fit tools (canirunthisllm, LLM RAM calculators, MLX ecosystem)
+    category: model-manager
+    description: Tools/sites that estimate which models fit a machine (VRAM/unified memory calculators, Apple MLX, mlx-lm). Investigate whether anyone combines fit-math with agentic coding setup.

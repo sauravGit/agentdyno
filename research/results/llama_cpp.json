@@ -1,0 +1,37 @@
+{
+  "name": "llama.cpp / llama-server",
+  "category": "local-runtime",
+  "url": "https://github.com/ggml-org/llama.cpp",
+  "license": "MIT License (SPDX: MIT). Fully open source.",
+  "pricing": "Free and open source; no tiers, no subscription. Users bear only their own hardware/compute costs.",
+  "platforms": "Cross-platform: macOS (Apple Silicon and Intel) with Metal GPU acceleration, Linux, Windows; also Android, embedded/CPU-only. GPU backends include Metal, CUDA, ROCm/HIP, Vulkan, SYCL. Distributed as source plus prebuilt binaries; the HTTP server ships as the `llama-server` binary.",
+  "local_model_support": "The core GGUF inference engine. Runs quantized GGUF models directly; underlies many downstream tools (Ollama, LM Studio, Jan, etc.). `llama-server` provides a lightweight HTTP server with a built-in web UI plus a native API and OpenAI-compatible endpoints.",
+  "hardware_awareness": "[uncertain] Minimal automatic hardware-awareness. It offers fine-grained manual control (-ngl / --gpu-layers, context size, quantization choice, --n-gpu-layers, tensor split) but does not auto-detect memory and recommend a model that fits; the user is expected to size the model and offload manually. Getting this wrong yields OOM or heavy CPU offload with no guided remediation.",
+  "agentic_coding_features": "None built in. It is an inference engine/server, not an agent; it has no file editing, multi-file refactor, or terminal-execution features. Agentic behavior comes from external clients (aider, Cline, OpenCode, Continue) that call llama-server. Tool/function calling is supported at the API level (via the OpenAI-compatible endpoint and Jinja chat templates) but is reported to be fragile with some models.",
+  "claude_code_compat": "[uncertain] llama-server implements OpenAI-compatible endpoints (/v1/chat/completions, /v1/completions, /v1/embeddings, /v1/models) but NOT the newer OpenAI Responses API (/v1/responses), and it has no native Anthropic API. A user explicitly filed a request stating 'I want to use ClaudeCode with llama-server offline, but it currently don't support necessary endpoints,' so Claude Code use currently requires an external proxy/translation layer rather than working natively.",
+  "popularity": "~121.5k GitHub stars (https://github.com/ggml-org/llama.cpp, observed 2026-07). The foundational engine behind most consumer local-LLM tooling.",
+  "pain_points": [
+    {
+      "complaint": "Missing OpenAI Responses API blocks drop-in agent use: 'The llama.cpp OpenAI-compatible server currently supports endpoints like /v1/chat/completions, but does not support the newer OpenAI Responses API (/v1/responses).' The requester adds: 'I want to use ClaudeCode with llama-server offline, but it currently don't support necessary endpoints.'",
+      "url": "https://github.com/ggml-org/llama.cpp/issues/19138"
+    },
+    {
+      "complaint": "Tool calling breaks under long context: with a tool that has multiple optional parameters, past ~30k tokens 'it repeatedly calls the same tool [and] the call is almost correct, but one optional parameter is missing.' The failure only stops when optional parameters are made required, indicating a schema-handling bug rather than user error.",
+      "url": "https://github.com/ggml-org/llama.cpp/issues/20164"
+    },
+    {
+      "complaint": "Discoverability/usability: the llama-server binary and its OpenAI-compatible serving are under-documented, with users unsure how compatible the endpoints are with OpenAI and requesting the server be properly documented as an OpenAI-compatible backend.",
+      "url": "https://github.com/microsoft/BitNet/issues/432"
+    }
+  ],
+  "gap_vs_vision": "As a raw engine it is the opposite end of 'Claude Code for everyone': powerful and free but not turnkey. It offers no built-in agentic coding, no automatic hardware-aware model recommendation (manual layer/quant tuning required), an incomplete OpenAI-compatibility surface (no /v1/responses) and no native Anthropic API, so acting as an offline Claude Code backend needs a proxy. Its CLI/flag-heavy UX and thin server docs make it inaccessible to non-expert users without a wrapper.",
+  "sources": [
+    "https://github.com/ggml-org/llama.cpp",
+    "https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md",
+    "https://github.com/ggml-org/llama.cpp/issues/19138",
+    "https://github.com/ggml-org/llama.cpp/issues/20164",
+    "https://github.com/microsoft/BitNet/issues/432",
+    "https://github.com/ggml-org/llama.cpp/discussions/3683"
+  ],
+  "uncertain": ["hardware_awareness", "claude_code_compat"]
+}

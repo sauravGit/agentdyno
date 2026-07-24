@@ -1,0 +1,31 @@
+{
+  "name": "OpenCode (sst/opencode)",
+  "category": "agentic-cli",
+  "url": "https://github.com/sst/opencode",
+  "license": "MIT (SPDX: MIT), truly open source",
+  "pricing": "Free and open source; no subscription. Bring-your-own-provider - pay whatever the chosen LLM provider charges, or nothing when using local models.",
+  "platforms": "Terminal (TUI) app for macOS (Apple Silicon and Intel), Linux, and Windows. Installed via Homebrew, Scoop, npm/curl script, and other package managers. Provider-agnostic client (models catalog via models.dev).",
+  "local_model_support": "Connects to local models via OpenAI-compatible endpoints, including Ollama (baseURL http://localhost:11434/v1 configured in opencode.json) and LM Studio. Supports many providers through models.dev. In practice, reliable file operations require strong tool-calling local models (e.g. Qwen3/qwen2.5-coder); weaker models fail to actually edit files.",
+  "hardware_awareness": "[uncertain] No hardware detection or memory-aware model recommendation. Does not inspect RAM/VRAM or suggest models that fit the machine; the user must configure the provider/model and an appropriate Modelfile/context template manually.",
+  "agentic_coding_features": "Claude-Code-like TUI agent: read/edit/write files, run terminal commands, multi-step agentic loops, LSP integration, session/sharing, and MCP support. Client/server architecture allowing a shared server driven by TUI or other clients. Broad provider support.",
+  "claude_code_compat": "Positioned as an open-source Claude-Code alternative. Supports Anthropic Claude models directly as a provider and can be pointed at Anthropic-compatible / OpenAI-compatible base URLs. [uncertain] Whether it exposes itself as an ANTHROPIC_BASE_URL server that Claude Code proper can bridge to (rather than just consuming Claude) is not confirmed.",
+  "popularity": "189,330 GitHub stars (repo sst/opencode, resolved via GitHub API redirect, 2026-07-24) - one of the most-starred agentic coding CLIs.",
+  "pain_points": [
+    "Tool calls appear to succeed but nothing happens on disk: 'Ollama (qwen2.5-coder): tool calls (edit/write) show as executed but no files are created/modified' - 'the JSON tool payload is printed in the output, but no files are actually created or modified on disk.' https://github.com/sst/opencode/issues/7030",
+    "Local Ollama models are not agentic: 'If I use it with any Ollama model whether local or cloud, it is not able to see files' despite Ollama supporting tool calling (opencode v1.0.164). https://github.com/sst/opencode/issues/5694",
+    "Local Ollama tool calling either not calling or failing outright - models think about which tool to use but never execute; tool-call JSON is printed to chat but commands don't run. https://github.com/sst/opencode/issues/1034",
+    "Wrong tool names with some local models: model looks for a 'read_file' tool instead of opencode's 'read' tool, so file reads never happen (gemma running via Ollama). https://github.com/sst/opencode/issues/21354",
+    "Beginners hit a documentation/setup gap for local models: 'I want to use the local model of ollama but I don't know how to do it. The API for using the good model is too expensive.' https://github.com/sst/opencode/issues/4851"
+  ],
+  "gap_vs_vision": "Despite huge popularity and a polished Claude-Code-like TUI, the local-model story is the weak point relative to 'hardware-aware local Claude Code for everyone.' No hardware/memory awareness; and with local Ollama models tool calls frequently misfire - files silently not written, models not seeing files, or emitting mismatched tool names - so agentic editing is unreliable unless a strong tool-calling model is used. Works best with frontier cloud models, which defeats the no-subscription/local goal for many users.",
+  "sources": [
+    "https://github.com/sst/opencode",
+    "https://github.com/sst/opencode/issues/7030",
+    "https://github.com/sst/opencode/issues/5694",
+    "https://github.com/sst/opencode/issues/1034",
+    "https://github.com/sst/opencode/issues/21354",
+    "https://github.com/sst/opencode/issues/4851",
+    "https://github.com/imagewize/ollama-opencode-setup"
+  ],
+  "uncertain": ["hardware_awareness", "claude_code_compat"]
+}

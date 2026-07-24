@@ -1,0 +1,33 @@
+topic: local-llm-coding-agents
+description: >
+  Field definitions for researching the landscape of tools that run open-source
+  LLMs locally and/or provide Claude-Code-like agentic coding from CLI or VS Code.
+fields:
+  - name: name
+    description: Official product/project name
+  - name: category
+    description: One of: local-runtime, model-manager, agentic-cli, ide-extension, bridge/router, desktop-app
+  - name: url
+    description: Primary repo or product URL (must be real, fetched)
+  - name: license
+    description: Exact license (SPDX if possible) and whether truly open source
+  - name: pricing
+    description: Free/paid tiers; any subscription requirement
+  - name: platforms
+    description: Supported OS/architectures, esp. macOS Intel vs Apple Silicon
+  - name: local_model_support
+    description: How it runs or connects to local open-source models (llama.cpp, Ollama, MLX, OpenAI-compatible API, etc.)
+  - name: hardware_awareness
+    description: Does it detect hardware and recommend models that fit memory? How honest/automatic is it?
+  - name: agentic_coding_features
+    description: File editing, tool use, terminal execution, multi-file refactors, MCP support, VS Code and CLI integration
+  - name: claude_code_compat
+    description: Can it act as or bridge to Claude Code (ANTHROPIC_BASE_URL, Anthropic-compatible API, router)? Details.
+  - name: popularity
+    description: GitHub stars / user counts with source URL and date
+  - name: pain_points
+    description: Real user complaints (quotes or close paraphrase) with URLs (GitHub issues, Reddit, HN). Minimum 2 if findable.
+  - name: gap_vs_vision
+    description: What this tool does NOT solve for "hardware-aware local Claude Code for everyone, no subscription"
+  - name: sources
+    description: List of URLs actually consulted

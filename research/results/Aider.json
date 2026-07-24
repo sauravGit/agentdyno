@@ -1,0 +1,31 @@
+{
+  "name": "Aider",
+  "category": "agentic-cli",
+  "url": "https://github.com/Aider-AI/aider",
+  "license": "Apache-2.0 (SPDX: Apache-2.0), truly open source",
+  "pricing": "Free and open source; no subscription. Users pay only for whatever LLM API they connect to (or nothing at all when using local models via Ollama/OpenAI-compatible endpoints).",
+  "platforms": "Cross-platform Python package (macOS incl. both Intel and Apple Silicon, Linux, Windows). Installed via `python -m pip install aider-install` or pipx/uv. No architecture-specific binary; runs anywhere Python runs.",
+  "local_model_support": "Connects to local models through Ollama (ollama_chat/ prefix recommended over ollama/) and any OpenAI-compatible API endpoint, plus LiteLLM-backed providers. OLLAMA_API_BASE (default http://127.0.0.1:11434) and OLLAMA_API_KEY configure the endpoint. Model behavior tuned via .aider.model.settings.yml (context window, edit_format).",
+  "hardware_awareness": "[uncertain] No built-in hardware detection or memory-aware model recommendation. Aider does not inspect RAM/VRAM or suggest models that fit; it relies on the user picking a model and on Ollama for serving. It does auto-adjust the Ollama context window to fit each request + 8k tokens to avoid silent truncation, but this is request-sizing, not hardware-sizing.",
+  "agentic_coding_features": "Whole-file and diff/SEARCH-REPLACE edit formats, automatic git commits with generated messages, multi-file edits/refactors, repo map for context, /add /run shell command execution, voice, image/URL context, linting and test-run integration. CLI-first (also has a browser UI). Not MCP-native (MCP support is limited/via wrappers, not a core feature).",
+  "claude_code_compat": "[uncertain] Not a Claude Code bridge or proxy. It is its own independent pair-programming CLI. It can use Anthropic Claude models directly as a backend (aider --model sonnet), but it does not expose or consume an ANTHROPIC_BASE_URL router to act as Claude Code, nor does it present a Claude-Code-compatible interface.",
+  "popularity": "47,667 GitHub stars (github.com/Aider-AI/aider, via GitHub API, 2026-07-24).",
+  "pain_points": [
+    "Local Ollama models cannot see files added to the chat: 'When using Aider with a local Ollama model the model is unable to see any files added to the chat' - user added package.json via /add but deepseek-r1:32b replied 'I don't currently have access to your package.json file or any other files in your project' (aider v0.72.3). https://github.com/Aider-AI/aider/issues/3010",
+    "Local/quantized models fail Aider's edit format: 'The LLM did not conform to the edit format' with DeepSeek-Coder-V2 locally, while Claude/ChatGPT and Llama 3.1 8B work. https://github.com/Aider-AI/aider/issues/1208 and 'SEARCH/REPLACE block failed to match!' https://github.com/Aider-AI/aider/issues/3651",
+    "Silent context truncation with Ollama: the docs warn 'Ollama uses a 2k context window by default' and 'silently discards context that exceeds the window. This is especially dangerous because many users don't even realize that most of their data is being discarded by Ollama.' https://aider.chat/docs/llms/ollama.html",
+    "Diff editing unusable with local qwen2.5-coder-32b-instruct, forcing users onto --edit-format whole. https://github.com/Aider-AI/aider/issues/2371"
+  ],
+  "gap_vs_vision": "Does not deliver 'hardware-aware local Claude Code for everyone.' No hardware detection or memory-fit model recommendation - users must know which model their machine can run and configure context windows and edit formats by hand. Local open-source models frequently break Aider's SEARCH/REPLACE edit format and even fail to receive added files, so out-of-the-box local UX is fragile compared to frontier cloud models. It is not a Claude Code drop-in/router, and MCP/agentic tool use is limited versus MCP-native agents.",
+  "sources": [
+    "https://github.com/Aider-AI/aider",
+    "https://aider.chat/docs/llms/ollama.html",
+    "https://aider.chat/docs/troubleshooting/edit-errors.html",
+    "https://github.com/Aider-AI/aider/issues/3010",
+    "https://github.com/Aider-AI/aider/issues/1208",
+    "https://github.com/Aider-AI/aider/issues/3651",
+    "https://github.com/Aider-AI/aider/issues/2371",
+    "https://dev.to/ryoryp/zero-cost-ai-pair-programming-mastering-aider-with-local-llms-ollama-5ae4"
+  ],
+  "uncertain": ["hardware_awareness", "claude_code_compat"]
+}

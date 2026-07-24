@@ -1,0 +1,231 @@
+{
+  "generatedAt": "2026-07-24T18:19:40.879Z",
+  "models": [
+    {
+      "id": "qwen2.5-coder-3b",
+      "family": "Qwen2.5-Coder",
+      "displayName": "Qwen2.5 Coder 3B Instruct",
+      "hfRepo": "bartowski/Qwen2.5-Coder-3B-Instruct-GGUF",
+      "paramsB": 3.1,
+      "activeParamsB": 3.1,
+      "contextLength": 32768,
+      "layers": 36,
+      "kvHeads": 2,
+      "headDim": 128,
+      "license": "Qwen Research",
+      "roles": [
+        "coding"
+      ],
+      "toolCallGrade": "B",
+      "quants": [
+        {
+          "quant": "Q4_K_M",
+          "sizeBytes": 1929903360,
+          "sha256": "3da3afe6cf5c674ac195803ea0dd6fee7e1c228c2105c1ce8c66890d1d4ab460",
+          "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-3B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-3B-Instruct-Q4_K_M.gguf",
+          "filename": "Qwen2.5-Coder-3B-Instruct-Q4_K_M.gguf"
+        },
+        {
+          "quant": "Q8_0",
+          "sizeBytes": 3285476608,
+          "sha256": "80d4fe6d15bd7b378b99c1cdd1370b4b1377f000b0477a425bbc871781b90536",
+          "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-3B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-3B-Instruct-Q8_0.gguf",
+          "filename": "Qwen2.5-Coder-3B-Instruct-Q8_0.gguf"
+        }
+      ]
+    },
+    {
+      "id": "qwen2.5-coder-7b",
+      "family": "Qwen2.5-Coder",
+      "displayName": "Qwen2.5 Coder 7B Instruct",
+      "hfRepo": "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF",
+      "paramsB": 7.6,
+      "activeParamsB": 7.6,
+      "contextLength": 32768,
+      "layers": 28,
+      "kvHeads": 4,
+      "headDim": 128,
+      "license": "Apache-2.0",
+      "roles": [
+        "coding"
+      ],
+      "toolCallGrade": "A",
+      "quants": [
+        {
+          "quant": "Q4_K_M",
+          "sizeBytes": 4683074336,
+          "sha256": "1664fccab734674a50763490a8c6931b70e3f2f8ec10031b54806d30e5f956b6",
+          "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
+          "filename": "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf"
+        },
+        {
+          "quant": "Q6_K",
+          "sizeBytes": 6254199584,
+          "sha256": "62197abf47f1a46b8d775244024e845e79ce722d5fafe50d00437c955e52046a",
+          "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-7B-Instruct-Q6_K.gguf",
+          "filename": "Qwen2.5-Coder-7B-Instruct-Q6_K.gguf"
+        }
+      ]
+    },
+    {
+      "id": "qwen2.5-coder-14b",
+      "family": "Qwen2.5-Coder",
+      "displayName": "Qwen2.5 Coder 14B Instruct",
+      "hfRepo": "bartowski/Qwen2.5-Coder-14B-Instruct-GGUF",
+      "paramsB": 14.7,
+      "activeParamsB": 14.7,
+      "contextLength": 32768,
+      "layers": 48,
+      "kvHeads": 8,
+      "headDim": 128,
+      "license": "Apache-2.0",
+      "roles": [
+        "coding"
+      ],
+      "toolCallGrade": "A",
+      "quants": [
+        {
+          "quant": "Q4_K_M",
+          "sizeBytes": 8988111072,
+          "sha256": "2946d28c9e1bb2bcae6d42e8678863a31775df6f740315c7d7e6d6b6411f5937",
+          "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-14B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf",
+          "filename": "Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf"
+        }
+      ]
+    },
+    {
+      "id": "qwen3-8b",
+      "family": "Qwen3",
+      "displayName": "Qwen3 8B",
+      "hfRepo": "Qwen/Qwen3-8B-GGUF",
+      "paramsB": 8.2,
+      "activeParamsB": 8.2,
+      "contextLength": 40960,
+      "layers": 36,
+      "kvHeads": 8,
+      "headDim": 128,
+      "license": "Apache-2.0",
+      "roles": [
+        "coding",
+        "general",
+        "reasoning"
+      ],
+      "toolCallGrade": "A",
+      "quants": [
+        {
+          "quant": "Q4_K_M",
+          "sizeBytes": 5027783488,
+          "sha256": "d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785",
+          "url": "https://huggingface.co/Qwen/Qwen3-8B-GGUF/resolve/main/Qwen3-8B-Q4_K_M.gguf",
+          "filename": "Qwen3-8B-Q4_K_M.gguf"
+        }
+      ]
+    },
+    {
+      "id": "gpt-oss-20b",
+      "family": "gpt-oss",
+      "displayName": "GPT-OSS 20B (MoE)",
+      "hfRepo": "ggml-org/gpt-oss-20b-GGUF",
+      "paramsB": 20.9,
+      "activeParamsB": 3.6,
+      "contextLength": 131072,
+      "layers": 24,
+      "kvHeads": 8,
+      "headDim": 64,
+      "license": "Apache-2.0",
+      "roles": [
+        "coding",
+        "general",
+        "reasoning"
+      ],
+      "toolCallGrade": "A",
+      "quants": [
+        {
+          "quant": "mxfp4",
+          "sizeBytes": 12109566624,
+          "sha256": "27cd6c432c7672cb812a92f611cf3ba7bbc35928262bb1e1253ff4ee6ae35901",
+          "url": "https://huggingface.co/ggml-org/gpt-oss-20b-GGUF/resolve/main/gpt-oss-20b-MXFP4.gguf",
+          "filename": "gpt-oss-20b-MXFP4.gguf"
+        }
+      ]
+    },
+    {
+      "id": "qwen3-coder-30b-a3b",
+      "family": "Qwen3-Coder",
+      "displayName": "Qwen3 Coder 30B-A3B (MoE)",
+      "hfRepo": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",
+      "paramsB": 30.5,
+      "activeParamsB": 3.3,
+      "contextLength": 262144,
+      "layers": 48,
+      "kvHeads": 4,
+      "headDim": 128,
+      "license": "Apache-2.0",
+      "roles": [
+        "coding"
+      ],
+      "toolCallGrade": "A",
+      "quants": [
+        {
+          "quant": "Q4_K_M",
+          "sizeBytes": 18556689568,
+          "sha256": "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad",
+          "url": "https://huggingface.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF/resolve/main/Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf",
+          "filename": "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf"
+        }
+      ]
+    },
+    {
+      "id": "llama-3.2-3b",
+      "family": "Llama-3.2",
+      "displayName": "Llama 3.2 3B Instruct",
+      "hfRepo": "bartowski/Llama-3.2-3B-Instruct-GGUF",
+      "paramsB": 3.2,
+      "activeParamsB": 3.2,
+      "contextLength": 131072,
+      "layers": 28,
+      "kvHeads": 8,
+      "headDim": 128,
+      "license": "Llama 3.2 Community",
+      "roles": [
+        "general"
+      ],
+      "toolCallGrade": "B",
+      "quants": [
+        {
+          "quant": "Q4_K_M",
+          "sizeBytes": 2019377696,
+          "sha256": "6c1a2b41161032677be168d354123594c0e6e67d2b9227c84f296ad037c728ff",
+          "url": "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+          "filename": "Llama-3.2-3B-Instruct-Q4_K_M.gguf"
+        }
+      ]
+    },
+    {
+      "id": "devstral-small-2507",
+      "family": "Devstral",
+      "displayName": "Devstral Small 1.1 (24B, agent-tuned)",
+      "hfRepo": "unsloth/Devstral-Small-2507-GGUF",
+      "paramsB": 23.6,
+      "activeParamsB": 23.6,
+      "contextLength": 131072,
+      "layers": 40,
+      "kvHeads": 8,
+      "headDim": 128,
+      "license": "Apache-2.0",
+      "roles": [
+        "coding"
+      ],
+      "toolCallGrade": "A",
+      "quants": [
+        {
+          "quant": "Q4_K_M",
+          "sizeBytes": 14333918432,
+          "sha256": "5578b1cd0733b496cdb2d309d9a275de2ea31681793c8f05f70f3adfa65a26c4",
+          "url": "https://huggingface.co/unsloth/Devstral-Small-2507-GGUF/resolve/main/Devstral-Small-2507-Q4_K_M.gguf",
+          "filename": "Devstral-Small-2507-Q4_K_M.gguf"
+        }
+      ]
+    }
+  ]
+}

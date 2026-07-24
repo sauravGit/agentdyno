@@ -1,0 +1,49 @@
+{
+  "name": "Cline / Roo Code",
+  "category": "ide-extension",
+  "url": "https://github.com/cline/cline",
+  "license": "Apache-2.0 (both are truly open source; Roo Code is a fork of Cline, also Apache-2.0 at https://github.com/RooCodeInc/Roo-Code/blob/main/LICENSE)",
+  "pricing": "Extensions are free/open source. No subscription to install. Cost comes entirely from the model/API you connect (cloud API keys are pay-per-token; local models via Ollama/LM Studio are free). BYO-key or BYO-local-endpoint model.",
+  "platforms": "Cross-platform via VS Code (macOS Intel and Apple Silicon, Windows, Linux). Roo Code additionally forked for other editors but was archived May 2026. No native OS binary; runs wherever VS Code runs.",
+  "local_model_support": "Both connect to local models via Ollama and LM Studio providers, plus any OpenAI-compatible endpoint (base URL + optional key). Cline added dedicated Ollama/LM Studio provider settings. No built-in inference engine; they are clients that call an external local server. [uncertain] Exact provider list evolves per release.",
+  "hardware_awareness": "Minimal. Neither extension detects local hardware (VRAM/RAM) nor recommends models that fit memory. They surface a context-window setting but rely on the user to pick an appropriately sized model and to configure Ollama's context length correctly; misconfiguration (e.g. Ollama's 2048-token default) silently degrades results. [uncertain]",
+  "agentic_coding_features": "Full agentic loop: multi-file editing with diff view, terminal command execution, file read/write, browser use (Cline), Plan/Act modes (Cline) and multiple modes (Roo Code), MCP server support, checkpoints. Tight VS Code integration (sidebar); no standalone CLI.",
+  "claude_code_compat": "Not a Claude Code bridge. They are independent VS Code agents. They can consume the same local OpenAI-compatible endpoints Claude Code can, but they do not expose or emulate the Anthropic Messages API and are not used to point Claude Code at a backend.",
+  "popularity": "Cline ~63,000+ GitHub stars as of June 2026 (https://github.com/cline/cline, reported in comparison articles). Roo Code ~24,294 stars, repo archived May 2026 (https://github.com/RooCodeInc/Roo-Code). [uncertain] exact live counts.",
+  "pain_points": [
+    {
+      "quote": "every time I send a message to cline...it quickly maxes out the context or sets it to like 27K tokens for some reason ... I try to compact the conversation, and it goes right back up to around +20k, defeating the purpose. (Using qwen3-coder-30b-a3b with 32K context; Ollama logs show prompt sizes of 85K-114K tokens.)",
+      "url": "https://github.com/cline/cline/issues/7048"
+    },
+    {
+      "quote": "'Cline is having trouble...' error loops with CodeLlama 7B, Phi4, DeepSeek R1 ... '[ERROR] You did not use a tool in your previous response!' -- tool calling failures and context window limitations causing widespread user frustration.",
+      "url": "https://github.com/cline/cline/issues/4362"
+    },
+    {
+      "quote": "Local Ollama Models Not Responsive: 'API Request, then nothing' -- selecting the Ollama provider and llama3.1:latest returns no response, though the models work fine when tested directly from bash.",
+      "url": "https://github.com/RooCodeInc/Roo-Code/issues/11049"
+    },
+    {
+      "quote": "Roo code won't connect to external Ollama server -- cannot connect to Ollama on non-localhost/LAN addresses (e.g. http://10.3.4.5:11434); model reported as unavailable. (Reopened as #11466.)",
+      "url": "https://github.com/RooCodeInc/Roo-Code/issues/6589"
+    }
+  ],
+  "gap_vs_vision": "Do not deliver 'hardware-aware local Claude Code for everyone.' No hardware detection or memory-fit model recommendations; users must hand-tune Ollama context length or hit silent truncation/tool-call loops. Local-model tool-call reliability is fragile (needs 20B-30B+ agent-tuned models and 24GB+ VRAM to be dependable). They are VS Code-bound (no CLI), and Roo Code is now archived, reducing its long-term viability.",
+  "sources": [
+    "https://github.com/cline/cline",
+    "https://github.com/cline/cline/issues/7048",
+    "https://github.com/cline/cline/issues/4362",
+    "https://github.com/RooCodeInc/Roo-Code",
+    "https://github.com/RooCodeInc/Roo-Code/issues/11049",
+    "https://github.com/RooCodeInc/Roo-Code/issues/6589",
+    "https://github.com/RooCodeInc/Roo-Code/issues/11466",
+    "https://github.com/RooCodeInc/Roo-Code/blob/main/LICENSE",
+    "https://llmconfigurator.com/en/guides/coding-agents/cline-with-local-llms",
+    "https://www.bodegaone.ai/blog/roo-code-shutdown-alternatives"
+  ],
+  "uncertain": [
+    "local_model_support",
+    "hardware_awareness",
+    "popularity"
+  ]
+}

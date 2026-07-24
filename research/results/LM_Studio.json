@@ -1,0 +1,39 @@
+{
+  "name": "LM Studio",
+  "category": "desktop-app",
+  "url": "https://lmstudio.ai",
+  "license": "Proprietary / closed source. The desktop app is not free/libre/open-source software; only some supporting SDKs and CLI pieces are open. As of July 8, 2025 it is free for both personal and commercial/workplace use (the previous commercial-license requirement was removed).",
+  "pricing": "Free for personal and commercial use; no paid tier or subscription required. Revenue model is not usage-billed to end users.",
+  "platforms": "macOS (Apple Silicon officially supported; Intel Mac builds exist but are effectively unsupported/legacy), Windows (x64 and ARM64), Linux (x64). macOS requires roughly macOS 13 Ventura or later. Uses Apple MLX engine on Apple Silicon plus a llama.cpp-based backend.",
+  "local_model_support": "Runs local GGUF models via a bundled llama.cpp engine and MLX models on Apple Silicon. Built-in model search/browser pulls quantized models from Hugging Face. Provides an OpenAI-compatible local server (/v1/chat/completions, /v1/completions, /v1/embeddings) and, in newer 0.4 builds, a server-native daemon and stateful REST API.",
+  "hardware_awareness": "Relatively strong compared to peers: the model-search UI flags whether a given model/quant is likely to fit the detected RAM/VRAM (e.g. 'full GPU offload possible' vs 'may be too large') and lets users tune GPU offload layers and context length. Detection is not perfect — users still hit OOM/'Unsupported device' situations and must manually reduce context length.",
+  "agentic_coding_features": "Primarily a chat + local-inference GUI and server, not an agentic coding tool. It has no native file-editing, multi-file refactor, or terminal-execution agent. It gained MCP client support (can connect to MCP servers) and its OpenAI-compatible server lets external agentic coding tools (Cline, Continue, aider, etc.) use it as a backend. No first-party VS Code extension or agentic CLI.",
+  "claude_code_compat": "[uncertain] Exposes an OpenAI-compatible API, not a native Anthropic API. To drive Claude Code it would need an OpenAI-to-Anthropic bridge/router (ANTHROPIC_BASE_URL pointed at a proxy). No documented first-party Anthropic-format endpoint.",
+  "popularity": "[uncertain] Widely cited as one of the most popular desktop local-LLM apps (frequently ranked alongside Ollama and Jan). Being closed source, there is no public GitHub star count for the core app; precise user numbers are not officially published.",
+  "pain_points": [
+    {
+      "complaint": "Closed-source frustration: community members 'discount LM Studio due to it not being open-sourced,' preferring transparency and auditability; a recurring r/LocalLLaMA thread asks 'Why do people say LM Studio isn't open-sourced?' and users migrate to open alternatives like Jan over the proprietary concern.",
+      "url": "https://www.reddit.com/r/LocalLLaMA/comments/1cvawmz/why_do_people_say_lm_studio_isnt_opensourced/"
+    },
+    {
+      "complaint": "Model-loading failures: users report errors when loading models (e.g. exit codes like 18446744072635812000) and 'Unsupported device' errors where LM Studio refuses to use a GPU that previously worked, sometimes only fixable by reducing context length or reinstalling GPU drivers.",
+      "url": "https://discuss.huggingface.co/t/error-while-loading-a-model/140598"
+    },
+    {
+      "complaint": "Hacker News commenters argue that 'LM Studio isn't free/libre/open source software, which misses the point' of running models locally for privacy/control, since users cannot inspect what the proprietary app does with their data.",
+      "url": "https://news.ycombinator.com/item?id=47626103"
+    }
+  ],
+  "gap_vs_vision": "Does not fully realize 'hardware-aware local Claude Code for everyone, no subscription.' It nails the no-subscription and (partly) hardware-aware parts, but it is closed source (a dealbreaker for privacy/transparency-focused users), has no native agentic coding or Claude Code compatibility (OpenAI-compatible only, requires a bridge), dropped effective Intel-Mac support, and is a GUI-centric chat/server rather than an agentic CLI.",
+  "sources": [
+    "https://lmstudio.ai",
+    "https://lmstudio.ai/docs/app/system-requirements",
+    "https://simonwillison.net/2025/Jul/8/lm-studio-is-free-for-use-at-work/",
+    "https://news.ycombinator.com/item?id=47626103",
+    "https://www.reddit.com/r/LocalLLaMA/comments/1cvawmz/why_do_people_say_lm_studio_isnt_opensourced/",
+    "https://discuss.huggingface.co/t/error-while-loading-a-model/140598",
+    "https://alternativeto.net/news/2026/1/lm-studio-0-4-adds-parallel-model-requests-server-native-daemon-and-new-stateful-rest-api",
+    "https://www.makeuseof.com/stopped-using-lm-studio-found-open-source-alternative/"
+  ],
+  "uncertain": ["claude_code_compat", "popularity"]
+}

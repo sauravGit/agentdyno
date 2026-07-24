@@ -1,0 +1,29 @@
+{
+  "name": "Athanor Lite",
+  "category": "model-manager",
+  "url": "https://github.com/BBALabs/athanor-lite",
+  "license": "Source-available, NOT open source. Custom 'Athanor Lite - Source-Available License' (c) 2026 Tony Winslow / Black Box Analytics. Grants view/study/evaluate, build-from-source for personal non-commercial use, and fork-to-contribute-upstream only. Explicitly FORBIDS redistribution (source or binary) as a product/service, commercial use, and removing notices. Not an OSI-approved license; fails the OSI open-source definition (no commercial use, no free redistribution).",
+  "pricing": "Free. Athanor Lite is the no-cost edition; the paid full 'Athanor' product (bbasecure.com/athanor) adds RAG document knowledge, MCP tool connections, multi-model compare, and fine-tuning. No subscription required for Lite.",
+  "platforms": "Windows-only, confirmed. Windows 10/11 64-bit; requires WebView2 Runtime. Built with Tauri + Rust (MSVC toolchain) with a llama.cpp sidecar. No macOS or Linux build (Apple Silicon not supported). NVIDIA GPU recommended for acceleration; CPU-only fallback supported.",
+  "local_model_support": "Runs models fully locally through a managed llama.cpp runtime (bundled sidecar), streaming chat. Curated catalog of verified GGUF models with exact file sizes and SHA-256 checksums; resumable, checksum-verified downloads. Can adopt an existing Ollama library in place via hard links (zero re-download). One-click 'download -> chat'.",
+  "hardware_awareness": "This is its flagship strength. Live hardware dashboard: GPU identification (architecture, driver, CUDA), VRAM ring, CPU/mem/GPU/disk meters at 1 Hz, plus a real tokens/sec speed benchmark. Every quant of every catalog model gets a per-machine fit verdict computed from your GPU: fits fully / fits tight / needs GPU+CPU split / CPU-only / exceeds this machine, with the best pick for your hardware surfaced first. Marketed as 'honest memory math, not guesswork' and pre-flights downloads against free disk space.",
+  "agentic_coding_features": "None. Athanor Lite is a model manager + private chat client, not a coding agent. No file editing, no tool/terminal execution, no multi-file refactors, no CLI coding mode. MCP is a feature of the paid full Athanor product, not Lite.",
+  "claude_code_compat": "None. No Anthropic-compatible API surface, no ANTHROPIC_BASE_URL bridge, no router. It exposes local chat via a managed llama.cpp runtime for its own UI; not positioned as a Claude Code backend. [uncertain]",
+  "popularity": "~38 GitHub stars, ~5 forks, 0 open issues, 1 open PR, ~37 commits, latest tag v0.1.1 (github.com/BBALabs/athanor-lite, fetched 2026-07-24). Very early-stage / low traction; effectively a solo-developer project by Tony Winslow.",
+  "pain_points": [
+    "No genuine user complaints were found. The project is brand new (v0.1.1, ~37 commits) with 0 open and effectively no closed issues, and negligible community discussion, so no real complaint quotes exist to cite: https://github.com/BBALabs/athanor-lite/issues",
+    "Structural friction (from primary sources, not user quotes): it is source-available, not open source, so commercial use and redistribution are prohibited by the LICENSE - https://github.com/BBALabs/athanor-lite/blob/main/LICENSE ; and it is Windows-only with no macOS/Linux/Apple Silicon build, per the README prerequisites - https://github.com/BBALabs/athanor-lite/blob/main/README.md"
+  ],
+  "gap_vs_vision": "Athanor Lite is the closest thing to the 'honest hardware fit-math + one-click local model' half of the vision, but it stops at private CHAT. It has no agentic coding (no file edits, tools, terminal, MCP, CLI) and no Claude Code compatibility. It is also Windows-only (excludes the large Mac/Apple Silicon local-LLM audience) and source-available rather than truly free/open, so it cannot be freely redistributed or used commercially. It solves 'which model fits my machine' beautifully but not 'local Claude Code for everyone.'",
+  "sources": [
+    "https://github.com/BBALabs/athanor-lite",
+    "https://github.com/BBALabs/athanor-lite/blob/main/LICENSE",
+    "https://github.com/BBALabs/athanor-lite/blob/main/README.md",
+    "https://github.com/BBALabs/athanor-lite/issues",
+    "https://bbasecure.com/athanor",
+    "https://github.com/ggml-org/llama.cpp"
+  ],
+  "uncertain": [
+    "claude_code_compat"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "name": "Goose (Block)",
+  "category": "agentic-cli",
+  "url": "https://github.com/block/goose",
+  "license": "Apache-2.0 (SPDX: Apache-2.0), truly open source",
+  "pricing": "Free and open source; no subscription. Bring-your-own LLM provider - pay the provider's rate, or nothing when running local models.",
+  "platforms": "CLI plus a native desktop app for macOS, Linux, and Windows. [uncertain] macOS Intel vs Apple Silicon breakdown not explicitly stated in the README; desktop builds are distributed but architecture specifics unconfirmed.",
+  "local_model_support": "Works with 15+ providers including Ollama, plus OpenAI-compatible endpoints, OpenRouter, Azure, Bedrock, Anthropic, Google. Local models are configured via `goose configure` (Ollama provider). In practice local tool-calling models (Qwen 2.5/3, etc.) are needed, and reliability is a well-documented weak spot.",
+  "hardware_awareness": "[uncertain] No hardware detection or memory-aware model recommendation. Does not inspect RAM/VRAM or recommend a model that fits; the user selects provider and model manually.",
+  "agentic_coding_features": "MCP-native: connects to 70+ extensions via the Model Context Protocol. Autonomous agent that edits files, executes shell commands, uses tools/extensions, and runs multi-step tasks from CLI or desktop app. Tool use is central, which makes it especially sensitive to local models' tool-calling quality.",
+  "claude_code_compat": "Supports Anthropic Claude as a first-class provider. [uncertain] It is an independent MCP-native agent rather than a Claude Code bridge/router; no confirmed ANTHROPIC_BASE_URL proxy mode to act as Claude Code itself.",
+  "popularity": "51,607 GitHub stars (repo block/goose, resolved via GitHub API redirect, 2026-07-24).",
+  "pain_points": [
+    "Local models routinely emit malformed JSON and Goose hard-fails the tool call: 'the experience with local models (even capable ones like Qwen 2.5 7B/14B) is severely degraded because they frequently emit malformed JSON when attempting tool calls' and 'When a local model misses a quote, leaves a trailing comma, or includes reasoning text inside the JSON block, Goose simply fails the tool call' - making 'the local experience feel fragile and unusable compared to the robust handling of cloud providers like Anthropic.' https://github.com/block/goose/issues/6688",
+    "Qwen3-coder tool calling breaks past a small tool count: works with ~5 tools or fewer, but Goose's default developer extension exposes 11 tools, and above ~5 the model 'outputs XML-formatted tool calls within the content field' instead of structured JSON, so tools never execute. https://github.com/block/goose/issues/6883",
+    "Chat mode still sends tools to models that don't support them: 'Ollama streaming ignores chat mode - still sends tools to models that don't support them' (e.g. deepseek-coder:6.7b), producing errors even with tools disabled. https://github.com/block/goose/issues/6117",
+    "Local Qwen models return raw XML text rather than parsed tool calls when any tool-bearing extension is enabled. https://github.com/block/goose/issues/3748",
+    "General 'Unhelpful responses for Tool Calling functionality with Ollama' and 'Request failed' errors during `goose configure` with a local Ollama model. https://github.com/block/goose/issues/1817 , https://github.com/block/goose/issues/2314"
+  ],
+  "gap_vs_vision": "Being MCP-native and tool-heavy makes Goose powerful with frontier models but especially brittle with local open-source models, the opposite of 'hardware-aware local Claude Code for everyone.' No hardware/memory awareness. Local models' malformed-JSON and XML-vs-JSON tool-call failures, plus the large default tool count exceeding what small models handle, mean agentic workflows frequently fail locally; maintainers/users have proposed json-repair-style coercion that is not yet standard. Reliable use still gravitates to paid cloud APIs.",
+  "sources": [
+    "https://github.com/block/goose",
+    "https://github.com/block/goose/issues/6688",
+    "https://github.com/block/goose/issues/6883",
+    "https://github.com/block/goose/issues/6117",
+    "https://github.com/block/goose/issues/3748",
+    "https://github.com/block/goose/issues/1817",
+    "https://github.com/block/goose/issues/2314",
+    "https://github.com/block/goose/discussions/1403",
+    "https://goose-docs.ai/docs/troubleshooting/known-issues/"
+  ],
+  "uncertain": ["platforms", "hardware_awareness", "claude_code_compat"]
+}

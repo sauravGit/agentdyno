@@ -1,0 +1,5 @@
+node_modules/
+dist/
+research/upstream/
+*.log
+.DS_Store

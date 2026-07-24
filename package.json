@@ -1,0 +1,16 @@
+{
+  "name": "magix-box",
+  "version": "0.1.0",
+  "description": "Scan your machine, find the model that fits, serve it, and wire your coding agent to it. Local, free, honest.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "engines": { "node": ">=20" },
+  "bin": { "mb": "./dist/cli.js" },
+  "files": ["dist", "src/catalog.json", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test 'test/*.test.js'",
+    "catalog": "npm run build && node dist/tools/build-catalog.js"
+  },
+  "devDependencies": { "typescript": "^5.6.0", "@types/node": "^22.0.0" }
+}
