@@ -139,3 +139,25 @@ Format: each entry = date, decision/question, answer, why, evidence.
   with tok/s, then mb connect writes the VERIFIED config. scan/fit/pull/serve
   retained as plumbing. THESIS.md updated with addendum, not rewritten —
   the falsified claim stays visible with the correction, per fact-check rules.
+
+### D-010: Brand = AgentDyno (CLI: dyno, npm: agentdyno)
+- Availability verified 2026-07-24: npm 404 (free), GitHub name search 0 hits,
+  agentdyno.dev RDAP 404 (unregistered; NOT purchased per no-spend guardrail),
+  agentdyno.com registered (acceptable; .dev is the developer TLD anyway).
+- Rejected: checkride (npm taken by an agent harness - too close), shakedown
+  (npm taken, 151 name collisions), modelproof (weaker metaphor).
+- Tagline direction: "Don't trust 'it fits.' Measure it." Dyno = dynamometer.
+- Repo/product rename to agentdyno; magix-box remains the workspace dir name.
+
+### D-011: First live exam run — the product validated itself
+- Qwen2.5-Coder-7B Q4_K_M on the M4/16GB, served with correct Qwen template
+  (server /props confirms full tool-call template caps): model still emitted
+  raw `<function .../>` XML instead of its own <tool_call> JSON format.
+  Grade F. This reproduces, on demand, the exact silent failure users report
+  (Continue #9157, Goose #6688) — and matches the skeptic's evidence that
+  "Qwen3 passes, Qwen2.5 fails". The dyno gave the right verdict where the
+  catalog prior (A) was wrong.
+- Fixes: catalog priors for qwen2.5-coder-7b/14b downgraded A->C; P5 filler
+  capped at 8K tokens (M4 prefill measured ~106 tok/s => full-context probe
+  would blow the 300s timeout; 8K keeps exam <2 min and still screens recall).
+- Next: same machine, Qwen3-8B — the A/B contrast is the launch demo.

@@ -45,7 +45,7 @@ const SEEDS: Seed[] = [
     paramsB: 7.6,
     license: "Apache-2.0",
     roles: ["coding"],
-    toolCallGrade: "A",
+    toolCallGrade: "C",
     quants: ["Q4_K_M", "Q6_K"],
   },
   {
@@ -57,7 +57,7 @@ const SEEDS: Seed[] = [
     paramsB: 14.7,
     license: "Apache-2.0",
     roles: ["coding"],
-    toolCallGrade: "A",
+    toolCallGrade: "C",
     quants: ["Q4_K_M"],
   },
   {

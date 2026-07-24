@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-24T18:19:40.879Z",
+  "generatedAt": "2026-07-24T18:37:16.462Z",
   "models": [
     {
       "id": "qwen2.5-coder-3b",
@@ -49,7 +49,7 @@
       "roles": [
         "coding"
       ],
-      "toolCallGrade": "A",
+      "toolCallGrade": "C",
       "quants": [
         {
           "quant": "Q4_K_M",
@@ -82,7 +82,7 @@
       "roles": [
         "coding"
       ],
-      "toolCallGrade": "A",
+      "toolCallGrade": "C",
       "quants": [
         {
           "quant": "Q4_K_M",

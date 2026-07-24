@@ -211,7 +211,10 @@ export async function runExam(modelId: string, context: number): Promise<ExamRep
   results.push(
     await timed("P5", "long-context recall", async () => {
       const filler = "function pad_%i(x){ return x + %i; } // filler line\n";
-      const targetTokens = Math.floor(context * 0.6);
+      // Cap the probe prompt: prefill on laptop hardware runs ~100 tok/s, so a
+      // full 32K-context probe would take minutes. 8K of filler still catches
+      // the recall failure mode while keeping the exam under ~2 minutes.
+      const targetTokens = Math.min(Math.floor(context * 0.6), 8192);
       const lines = Math.max(50, Math.floor(targetTokens / 14)); // ~14 tok/line
       let body = "// PROJECT CONSTANT: BUILD_ID = 90125\n";
       for (let i = 0; i < lines; i++) body += filler.replaceAll("%i", String(i));

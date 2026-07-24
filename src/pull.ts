@@ -6,6 +6,7 @@ import {
   createWriteStream,
   existsSync,
   renameSync,
+  symlinkSync,
   statSync,
   unlinkSync,
 } from "node:fs";
@@ -92,10 +93,32 @@ export async function pullModel(model: CatalogModel, quant: QuantEntry): Promise
 
 interface GhAsset { name: string; browser_download_url: string; size: number }
 
+const SERVER_NAME = process.platform === "win32" ? "llama-server.exe" : "llama-server";
+
+/** Stable path to the managed llama-server (symlink set after extraction). */
+export function serverBinPath(): string {
+  return join(RUNTIME_DIR, SERVER_NAME);
+}
+
+function findServerBinary(dir: string): string | null {
+  // Release archives have varied layouts (flat llama-<tag>/, build/bin/, ...).
+  try {
+    const out = execFileSync("find", [dir, "-name", SERVER_NAME, "-type", "f"], {
+      encoding: "utf8",
+    })
+      .trim()
+      .split("\n")
+      .filter(Boolean);
+    return out[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Fetch the right llama.cpp prebuilt server for this OS/arch. */
 export async function pullRuntime(): Promise<string> {
   ensureDirs();
-  const serverBin = join(RUNTIME_DIR, "build", "bin", "llama-server");
+  const serverBin = serverBinPath();
   if (existsSync(serverBin)) return serverBin;
 
   const rel = await (
@@ -124,9 +147,14 @@ export async function pullRuntime(): Promise<string> {
   } else {
     execFileSync("unzip", ["-o", archive, "-d", RUNTIME_DIR]);
   }
-  if (!existsSync(serverBin)) {
-    throw new Error(`llama-server not found after extraction (looked at ${serverBin})`);
+  const found = findServerBinary(RUNTIME_DIR);
+  if (!found) {
+    throw new Error(`llama-server not found anywhere under ${RUNTIME_DIR} after extraction`);
   }
-  console.log(`runtime ready: ${serverBin}`);
+  if (found !== serverBin) {
+    if (existsSync(serverBin)) unlinkSync(serverBin);
+    symlinkSync(found, serverBin);
+  }
+  console.log(`runtime ready: ${serverBin} -> ${found}`);
   return serverBin;
 }

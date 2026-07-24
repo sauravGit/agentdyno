@@ -5,6 +5,7 @@ import { spawn, execFileSync } from "node:child_process";
 import { existsSync, openSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { HOME, LOGS_DIR, MODELS_DIR, PORT, ensureDirs } from "./catalog.js";
+import { serverBinPath } from "./pull.js";
 import type { CatalogModel, HardwareReport, QuantFit } from "./types.js";
 
 const PID_FILE = join(HOME, "server.pid");
@@ -67,13 +68,7 @@ export async function startServer(
   if (!existsSync(modelPath)) {
     throw new Error(`model not downloaded: run mb pull ${fit.model.id}`);
   }
-  const serverBin = join(
-    HOME,
-    "runtime",
-    "build",
-    "bin",
-    process.platform === "win32" ? "llama-server.exe" : "llama-server"
-  );
+  const serverBin = serverBinPath();
   if (!existsSync(serverBin)) throw new Error("runtime missing: run mb pull --runtime");
 
   // Context: requested, else the fitted comfortable max (floor 4096, capped by window).

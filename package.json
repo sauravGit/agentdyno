@@ -1,16 +1,41 @@
 {
-  "name": "magix-box",
+  "name": "agentdyno",
   "version": "0.1.0",
-  "description": "Scan your machine, find the model that fits, serve it, and wire your coding agent to it. Local, free, honest.",
+  "description": "The dyno bench for local coding agents: scan your machine, fit the right open model, and PROVE it can drive tools before you wire up Claude Code, OpenCode, or Aider.",
   "type": "module",
   "license": "Apache-2.0",
-  "engines": { "node": ">=20" },
-  "bin": { "mb": "./dist/cli.js" },
-  "files": ["dist", "src/catalog.json", "README.md", "LICENSE"],
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "dyno": "./dist/src/cli.js"
+  },
+  "files": [
+    "dist",
+    "src/catalog.json",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "npm run build && node --test 'test/*.test.js'",
     "catalog": "npm run build && node dist/tools/build-catalog.js"
   },
-  "devDependencies": { "typescript": "^5.6.0", "@types/node": "^22.0.0" }
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/paromitapa/agentdyno"
+  },
+  "keywords": [
+    "llm",
+    "local",
+    "agent",
+    "claude-code",
+    "llama.cpp",
+    "benchmark",
+    "tool-calling"
+  ]
 }

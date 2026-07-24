@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentDyno — Don't trust "it fits." Measure it.</title>
+<meta name="description" content="The dyno bench for local coding agents. Scan your machine, fit the right open model, and prove it can drive tools before you wire up your agent.">
+<style>
+:root{
+  --bg:#0B0E11;--surface:#151A21;--line:#232B35;--text:#E8EDF2;--muted:#8A97A6;
+  --accent:#3DDC97;--warn:#E8C547;--fail:#E4604E;
+  --mono:"SF Mono","JetBrains Mono","Cascadia Code",ui-monospace,Menlo,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+}
+@media (prefers-color-scheme: light){
+  :root{--bg:#F7F9FA;--surface:#FFFFFF;--line:#DCE3EA;--text:#14181D;--muted:#5A6673;--accent:#1E9E68}
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:960px;margin:0 auto;padding:0 20px}
+header{padding:18px 0;border-bottom:1px solid var(--line)}
+.brand{font-family:var(--mono);font-size:20px;font-weight:600}
+.brand .needle{color:var(--accent)}
+.hero{padding:72px 0 48px;text-align:left}
+.hero h1{font-family:var(--mono);font-size:clamp(28px,5vw,44px);line-height:1.1;max-width:20ch}
+.hero h1 em{color:var(--accent);font-style:normal}
+.hero p.sub{margin-top:16px;color:var(--muted);font-size:18px;max-width:60ch}
+.cta{display:inline-block;margin-top:28px;font-family:var(--mono);background:var(--accent);color:#0B0E11;padding:12px 22px;border-radius:6px;font-weight:600}
+.cta:hover{text-decoration:none;filter:brightness(1.1)}
+.cta.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent);margin-left:12px}
+section{padding:48px 0;border-top:1px solid var(--line)}
+h2{font-family:var(--mono);font-size:24px;margin-bottom:20px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:24px;overflow-x:auto}
+pre{font-family:var(--mono);font-size:14px;line-height:1.7;overflow-x:auto}
+pre .c{color:var(--muted)} pre .g{color:var(--accent)} pre .w{color:var(--warn)} pre .r{color:var(--fail)}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:560px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line)}
+th{font-family:var(--mono);color:var(--muted);font-weight:500;font-size:13px;text-transform:uppercase;letter-spacing:.06em}
+td.mono,.mono{font-family:var(--mono)}
+.pass{color:var(--accent);font-family:var(--mono)} .fail{color:var(--fail);font-family:var(--mono)}
+.stamp{display:inline-block;font-family:var(--mono);font-size:40px;font-weight:700;border:3px solid var(--accent);color:var(--accent);border-radius:8px;padding:2px 18px;transform:rotate(-3deg)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.grid .panel h3{font-family:var(--mono);font-size:16px;margin-bottom:8px}
+.grid .panel p{color:var(--muted);font-size:15px}
+.faq dt{font-family:var(--mono);margin-top:20px;font-weight:600}
+.faq dd{color:var(--muted);margin-top:6px;max-width:72ch}
+footer{padding:40px 0;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
+footer .links{margin-bottom:10px}
+.notice{font-size:14px;color:var(--muted);margin-top:16px;max-width:72ch}
+</style>
+</head>
+<body>
+<header><div class="wrap"><span class="brand">agentd<span class="needle">y</span>no</span></div></header>
+
+<div class="wrap">
+<div class="hero">
+  <h1>Don't trust "it fits."<br><em>Measure it.</em></h1>
+  <p class="sub">AgentDyno is the dyno bench for local coding agents. It scans your machine,
+  fits the right open model, launches it correctly — then proves, with a five-probe exam on
+  your own hardware, that the model can actually drive tools before you wire up Claude Code,
+  OpenCode, or Aider.</p>
+  <a class="cta" href="#quickstart">Run the exam</a>
+  <a class="cta ghost" href="https://github.com/paromitapa/agentdyno">Source (Apache-2.0)</a>
+  <p class="notice">Local, free, open source. No account, no telemetry, no paid tier — the
+  entire category exists because people are done with subscriptions.</p>
+</div>
+
+<section>
+  <h2>// the problem</h2>
+  <div class="grid">
+    <div class="panel"><h3>"It fits" is not "it works"</h3>
+      <p>Fit calculators check memory. Then your agent silently fails: tool calls
+      arrive as raw XML, edits report success while no file changes, models fall
+      over once more than five tools are registered. All documented failure modes
+      across Goose, OpenCode, Aider, Cline, and Continue.</p></div>
+    <div class="panel"><h3>Every tool has half the answer</h3>
+      <p>Fit tools stop at a number. Agent CLIs are hardware-blind. Managers
+      launch models but never test them as agents. Nobody hands you proof.</p></div>
+    <div class="panel"><h3>The failure is per-machine</h3>
+      <p>The same model behaves differently per quant, context size, and memory
+      budget. A leaderboard can't answer for your laptop. Only a measurement
+      on your hardware can.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>// the exam</h2>
+  <div class="panel">
+  <table>
+    <tr><th>probe</th><th>proves</th><th>screens for</th><th>result</th></tr>
+    <tr><td class="mono">P1 single tool call</td><td>well-formed tool_call JSON</td><td>raw XML / prose instead of a call</td><td class="pass">PASS 41.2 tok/s</td></tr>
+    <tr><td class="mono">P2 selection among 9</td><td>right tool under load</td><td>degradation past ~5 tools</td><td class="pass">PASS 39.8 tok/s</td></tr>
+    <tr><td class="mono">P3 result round trip</td><td>uses real tool output</td><td>"says done, did nothing"</td><td class="pass">PASS 40.5 tok/s</td></tr>
+    <tr><td class="mono">P4 tricky-string args</td><td>quotes/newlines survive</td><td>mangled edit payloads</td><td class="pass">PASS 38.9 tok/s</td></tr>
+    <tr><td class="mono">P5 long-context recall</td><td>facts from context start</td><td>forgetting the file it read</td><td class="pass">PASS 36.1 tok/s</td></tr>
+  </table>
+  <p style="margin-top:18px"><span class="stamp">A</span>&nbsp;&nbsp;<span class="mono" style="color:var(--muted)">agent-ready on this machine at this context — report saved, config verified</span></p>
+  </div>
+  <p class="notice">Illustrative output. Grades: A — all probes pass at usable speed.
+  B — core pass, limited context or speed. C — chat only. F — cannot drive tools.
+  A grade C is printed as proudly as an A; honesty is the product.</p>
+</section>
+
+<section id="quickstart">
+  <h2>// quickstart</h2>
+  <div class="panel"><pre>
+<span class="c"># macOS (Apple Silicon or Intel), Linux; Windows experimental</span>
+git clone https://github.com/paromitapa/agentdyno && cd agentdyno
+npm install && npm run build
+
+node dist/src/cli.js scan     <span class="c"># what this machine really has</span>
+node dist/src/cli.js fit      <span class="c"># which models fit, ranked, max agent context</span>
+node dist/src/cli.js pull qwen2.5-coder-7b
+node dist/src/cli.js serve    <span class="c"># managed llama-server, correct flags</span>
+node dist/src/cli.js doctor   <span class="c"># the exam: 5 probes, grade A-F</span>
+node dist/src/cli.js connect claude   <span class="c"># wire an agent to the VERIFIED server</span></pre></div>
+  <p class="notice">Under the hood: honest fit math from real GGUF geometry (weights + KV cache +
+  overhead vs. your platform's true budget), SHA-256-verified downloads, and llama.cpp's
+  llama-server — which natively speaks both the OpenAI and Anthropic APIs.</p>
+</section>
+
+<section>
+  <h2>// honest answers</h2>
+  <dl class="faq">
+    <dt>Is this another fit calculator?</dt>
+    <dd>No. llmfit (30k+ stars) already answers "does it fit" well. AgentDyno answers
+    "does it work as an agent, on this machine" — and keeps the transcript as proof.</dd>
+    <dt>Will a 7B model replace my Claude subscription?</dt>
+    <dd>For many agentic edits on a 16 GB laptop: no, and AgentDyno will tell you so
+    with a grade instead of letting you find out through silent failures. What it gives
+    you is the best verified setup your hardware can honestly support — private and free.</dd>
+    <dt>Can I point Claude Code at this?</dt>
+    <dd>Technically yes — the managed server speaks the Anthropic Messages API and
+    <span class="mono">connect claude</span> prints the env vars. Note: Anthropic has not
+    publicly stated a position on third-party backends
+    (<a href="https://github.com/anthropics/claude-code/issues/5577">claude-code#5577</a>).
+    OpenCode and Aider are fully-open first-class targets.</dd>
+    <dt>What data leaves my machine?</dt>
+    <dd>Nothing. Downloads come from Hugging Face and GitHub; inference is local;
+    there is no telemetry of any kind.</dd>
+  </dl>
+</section>
+</div>
+
+<footer><div class="wrap">
+  <div class="links mono">
+    <a href="https://github.com/paromitapa/agentdyno">github</a> ·
+    <a href="https://github.com/ggml-org/llama.cpp">llama.cpp</a> ·
+    <a href="https://github.com/AlexsJones/llmfit">llmfit</a> ·
+    <a href="https://github.com/BBALabs/athanor-lite">athanor-lite (inspiration)</a>
+  </div>
+  AgentDyno · Apache-2.0 · built local-first, no subscription, no account.
+</div></footer>
+</body>
+</html>
