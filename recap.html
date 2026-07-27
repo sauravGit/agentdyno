@@ -89,17 +89,46 @@ probe bug we caught in our own tool before shipping, in <a href="research/RED_TE
 
 <h2>// run it yourself</h2>
 <div class="panel mono" style="font-size:13px;white-space:pre-wrap">git clone https://github.com/sauravGit/agentdyno &amp;&amp; cd agentdyno
-npm install &amp;&amp; npm run build &amp;&amp; npm test        <span style="color:var(--muted)"># 16 tests pass</span>
+npm install &amp;&amp; npm run build &amp;&amp; npm test        <span style="color:var(--muted)"># 27 tests pass</span>
 node dist/src/cli.js scan                          <span style="color:var(--muted)"># honest hardware</span>
-node dist/src/cli.js fit                           <span style="color:var(--muted)"># what fits, ranked</span>
-node dist/src/cli.js pull qwen3-8b
-node dist/src/cli.js serve  &amp;&amp;  node dist/src/cli.js doctor   <span style="color:var(--muted)"># the exam</span>
-node dist/src/cli.js connect claude                <span style="color:var(--muted)"># VERIFIED config only</span></div>
+node dist/src/cli.js switch                        <span style="color:var(--muted)"># ranked: verified beats unverified, always</span>
+node dist/src/cli.js switch --activate             <span style="color:var(--muted)"># one command: pull + serve the top pick</span>
+node dist/src/cli.js doctor                        <span style="color:var(--muted)"># the exam</span>
+node dist/src/cli.js connect claude                <span style="color:var(--muted)"># VERIFIED config only</span>
+node dist/src/cli.js dashboard                      <span style="color:var(--muted)"># local web UI + API at 127.0.0.1:8403</span></div>
+
+<h2>// v0.2.0 — switcher, dashboard, IDE (user-directed expansion)</h2>
+<p>After v0.1.0 shipped, the ask expanded: a benchmark-based model switcher, a UI, and IDE
+connectors. Before building, one framing was corrected rather than accepted: no model that runs on
+a consumer laptop is competitive with Opus/Fable-class frontier models — that promise was not built
+toward. What got added instead, honestly:</p>
+<ul>
+<li><strong>Switcher</strong> (<span class="mono">dyno switch</span>) — ranks the whole catalog by
+whether each model has been VERIFIED by the exam on this machine; a verified grade always outranks
+an unverified catalog guess, because we already proved guesses can be wrong (Qwen2.5-Coder-7B was
+cataloged grade A until measured F). External signal comes from Aider's real coding leaderboard —
+matched only when the same family AND a close parameter count both appear on it. Honest finding:
+zero of our 8 catalog models get a match today; the leaderboard skews to 32B+ models, ours are
+laptop-sized. Shown as "no data," not faked.</li>
+<li><strong>Dashboard + API</strong> (<span class="mono">dyno dashboard</span>) — loopback-only
+web UI and JSON API over the same logic: switcher table with one-click activate, live doctor exam,
+connect-config generator. Verified end-to-end over real HTTP, not just compiled: activated a model
+via the API, confirmed the server came up healthy, and confirmed a previously saved grade surfaced
+automatically — screenshot in <a href="site/certificates/qwen3-8b.html">the certificate</a> and
+logged in BUILD_LOG.md D-016.</li>
+<li><strong>VS Code extension</strong> (<span class="mono">vscode-extension/</span>) — a real,
+packaged <span class="mono">.vsix</span>, deliberately a thin wrapper (opens the same dashboard in
+a webview) rather than a second implementation of the product logic.
+<strong>Not verified</strong>: no VS Code CLI was available in this environment to actually load
+and click it — stated plainly rather than claimed as tested.</li>
+</ul>
 
 <h2>// deliverables map</h2>
 <table class="map">
 <tr><th>artifact</th><th>what it is</th></tr>
 <tr><td><a href="site/index.html">site/index.html</a></td><td>Landing site — real numbers, <a href="site/screenshots/desktop.png">desktop</a> + <a href="site/screenshots/mobile.png">mobile</a> verified</td></tr>
+<tr><td><a href="site/dashboard/index.html">site/dashboard/</a></td><td>Local dashboard UI (serve via <span class="mono">dyno dashboard</span>)</td></tr>
+<tr><td><a href="vscode-extension/">vscode-extension/</a></td><td>VS Code extension shell + packaged .vsix</td></tr>
 <tr><td><a href="site/video/launch.mp4">launch.mp4</a></td><td>45s launch film — the F-vs-B story</td></tr>
 <tr><td><a href="site/video/walkthrough.mp4">walkthrough.mp4</a></td><td>Product walkthrough — full command flow</td></tr>
 <tr><td><a href="THESIS.md">THESIS.md</a></td><td>Product thesis + the falsified claim, kept visible with its correction</td></tr>
@@ -109,9 +138,9 @@ node dist/src/cli.js connect claude                <span style="color:var(--mute
 <tr><td><a href="docs/DESIGN.md">DESIGN.md</a></td><td>Architecture, fit math, per-platform budgets</td></tr>
 <tr><td><a href="brand/BRAND.md">BRAND.md</a></td><td>Brand guidelines — a stranger can make a new on-brand asset</td></tr>
 <tr><td><a href="brand/LAUNCH_VIDEO_SCRIPT.md">LAUNCH_VIDEO_SCRIPT.md</a></td><td>Shot-by-shot video script</td></tr>
-<tr><td><a href="site/certificates/qwen3-8b.html">certificates/*.html</a></td><td>Unexpected deliverable: printable per-model calibration certificates</td></tr>
+<tr><td><a href="site/certificates/qwen3-8b.html">certificates/*.html</a></td><td>Printable per-model calibration certificates</td></tr>
 <tr><td><a href="src/catalog.json">catalog.json</a></td><td>8 models, sizes + SHA-256 + KV geometry from live Hugging Face metadata</td></tr>
-<tr><td><a href="BUILD_LOG.md">BUILD_LOG.md</a></td><td>20 logged decisions + every self-answered question</td></tr>
+<tr><td><a href="BUILD_LOG.md">BUILD_LOG.md</a></td><td>17 decisions logged, every self-answered question, every caught bug</td></tr>
 </table>
 
 <h2>// guardrails held</h2>
