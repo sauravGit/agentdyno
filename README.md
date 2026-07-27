@@ -30,6 +30,22 @@ node dist/src/cli.js doctor      # THE EXAM: 5 probes, grade A-F, tok/s
 node dist/src/cli.js connect claude   # wire an agent to the VERIFIED server
 ```
 
+## Switcher, dashboard, IDE
+
+- `dyno switch` — one ranked list across the whole catalog: a model VERIFIED
+  by `doctor` on this machine always outranks an unverified catalog prior,
+  no matter the letter grade (we proved priors can be wrong — see BUILD_LOG.md
+  D-011). `dyno switch <model-id>` or `--activate` pulls + serves the pick in
+  one command. Where a real external benchmark match exists (Aider's coding
+  leaderboard, family + size matched, no borrowed scores from bigger siblings)
+  it breaks ties; most laptop-sized models honestly show "no data" instead.
+- `dyno dashboard` — a loopback-only local web UI + JSON API (`127.0.0.1:8403`)
+  over the same scan/switch/doctor/connect logic: hardware panel, switcher
+  table with one-click activate, live doctor exam, connect-config generator.
+- `vscode-extension/` — a thin VS Code wrapper (not a reimplementation) that
+  starts the dashboard and embeds it in a webview. Build a `.vsix` with
+  `cd vscode-extension && npm install && npm run build && npx @vscode/vsce package`.
+
 ## The exam (`doctor`)
 
 | Probe | What it proves | Failure it screens for |

@@ -1,5 +1,6 @@
 node_modules/
 dist/
+vscode-extension/out/
 research/upstream/
 *.log
 .DS_Store

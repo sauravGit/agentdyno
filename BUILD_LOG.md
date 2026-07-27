@@ -287,3 +287,23 @@ Format: each entry = date, decision/question, answer, why, evidence.
   so it showed a placeholder despite the tab looking selected. Fixed
   (loadConnect(activeTarget) now runs on load, not just on tab click) and
   re-verified with a fresh screenshot showing the real config appear by default.
+
+### D-017: VS Code extension shell (thin wrapper, as scoped)
+- Built vscode-extension/ as its own small TypeScript project (separate
+  package.json/tsconfig — VS Code extensions need commonjs output, the main
+  CLI uses NodeNext ESM, so a shared build would fight itself).
+- Deliberately thin, per the user's chosen scope: it does NOT reimplement
+  scan/fit/doctor. It runs `node dist/src/cli.js dashboard` in an integrated
+  terminal (prompting once for the repo path, saved to VS Code settings) and
+  embeds the same dashboard in a webview via an iframe with a scoped CSP
+  (frame-src limited to the dashboard's own origin). One source of truth for
+  all product logic: the CLI + API server.
+- Packaged a REAL, installable .vsix with @vscode/vsce (8.21 KB, 6 files:
+  compiled extension.js, package.json, README, LICENSE) — not just source.
+- HONEST LIMITATION: no `code` CLI was available in this environment to
+  actually load the extension into a running VS Code and click the commands.
+  Verified as far as possible without that: clean tsc compile, clean vsce
+  package with no warnings, manual inspection of the packaged package.json
+  and bundled extension.js. NOT verified: the webview actually renders inside
+  real VS Code, the terminal command actually runs correctly, the settings
+  prompt UX. This gap is stated here rather than claimed as tested.

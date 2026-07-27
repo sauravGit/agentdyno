@@ -1,0 +1,40 @@
+{
+  "name": "agentdyno-vscode",
+  "displayName": "AgentDyno",
+  "description": "Thin wrapper: opens the AgentDyno local dashboard (scan/fit/switch/doctor/connect) inside VS Code. Requires the AgentDyno CLI (github.com/sauravGit/agentdyno) checked out on disk — this extension does not bundle it.",
+  "version": "0.1.0",
+  "publisher": "agentdyno",
+  "license": "Apache-2.0",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      { "command": "agentdyno.openDashboard", "title": "AgentDyno: Open Dashboard" },
+      { "command": "agentdyno.startServer", "title": "AgentDyno: Start Dashboard Server" }
+    ],
+    "configuration": {
+      "title": "AgentDyno",
+      "properties": {
+        "agentdyno.repoPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to a local clone of github.com/sauravGit/agentdyno (the directory containing dist/src/cli.js after `npm run build`). Leave empty and you'll be prompted the first time."
+        },
+        "agentdyno.dashboardUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8403",
+          "description": "AgentDyno dashboard URL. Only change this if you started `dyno dashboard` on a non-default port."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.6.0"
+  }
+}
