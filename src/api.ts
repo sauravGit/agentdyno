@@ -6,11 +6,12 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
-import { MODELS_DIR, loadCatalog, findModel, ensureDirs } from "./catalog.js";
+import { MODELS_DIR, loadCatalog, findModel, resolveModel, ensureDirs } from "./catalog.js";
 import { DEFAULT_CONTEXT } from "./fit.js";
 import { scanHardware } from "./scan.js";
-import { readState, startServer, stopServer, health, BASE_URL } from "./serve.js";
+import { activeBaseUrl, readState, requestModelFor, startServer, startOllamaServer, stopServer, health, BASE_URL } from "./serve.js";
 import { pullModel, pullRuntime } from "./pull.js";
+import { isOllamaRunning, listOllamaModels, ollamaModelToCatalogEntry, pullOllamaModel } from "./ollama.js";
 import { runExam, type ExamReport } from "./probes.js";
 import { fetchLeaderboard } from "./leaderboard.js";
 import { rankForSwitch, type SwitchCandidate } from "./switch.js";
@@ -43,6 +44,7 @@ function json(res: ServerResponse, status: number, body: unknown) {
 }
 
 function serializeCandidate(c: SwitchCandidate) {
+  const isOllama = c.fit.model.id.startsWith("ollama:");
   return {
     modelId: c.fit.model.id,
     displayName: c.fit.model.displayName,
@@ -50,7 +52,10 @@ function serializeCandidate(c: SwitchCandidate) {
     paramsB: c.fit.model.paramsB,
     quant: c.fit.quant.quant,
     sizeBytes: c.fit.quant.sizeBytes,
-    downloaded: existsSync(join(MODELS_DIR, c.fit.quant.filename)),
+    // Ollama entries are only ever added to the switch list from a live
+    // `ollama list` in the first place (see /api/switch above) — if it's in
+    // the list, it's already pulled.
+    downloaded: isOllama ? true : existsSync(join(MODELS_DIR, c.fit.quant.filename)),
     mode: c.fit.mode,
     maxComfortableContext: c.fit.maxComfortableContext,
     verified: c.verified,
@@ -76,6 +81,16 @@ async function readBody(req: IncomingMessage): Promise<any> {
 function runActivation(modelId: string, context?: number) {
   activation = { inProgress: true, modelId, step: "resolving" };
   (async () => {
+    if (modelId.startsWith("ollama:")) {
+      const tag = modelId.slice("ollama:".length);
+      activation.step = "pulling via ollama";
+      await pullOllamaModel(tag);
+      activation.step = "starting server";
+      stopServer();
+      await startOllamaServer(tag, context ?? DEFAULT_CONTEXT);
+      activation = { inProgress: false, modelId, finishedAt: new Date().toISOString() };
+      return;
+    }
     const models = loadCatalog();
     const model = findModel(models, modelId);
     const hw = scanHardware(MODELS_DIR);
@@ -104,7 +119,7 @@ function runDoctor() {
     return;
   }
   doctorRun = { inProgress: true, modelId: s.modelId };
-  runExam(s.modelId, s.context)
+  runExam(s.modelId, s.context, { baseUrl: activeBaseUrl(s), requestModel: requestModelFor(s) })
     .then((result) => {
       saveReport(result);
       doctorRun = { inProgress: false, modelId: s.modelId, result };
@@ -150,8 +165,24 @@ export function createApiServer(dashboardRoot: string) {
         const hw = scanHardware(MODELS_DIR);
         const reports = loadAllReports();
         const leaderboard = await fetchLeaderboard().catch(() => []);
-        const ranked = rankForSwitch(loadCatalog(), hw, reports, leaderboard, context);
-        return json(res, 200, { context, candidates: ranked.map(serializeCandidate) });
+        const models = loadCatalog();
+        if (await isOllamaRunning()) {
+          const tags = await listOllamaModels();
+          for (const t of tags) {
+            try {
+              models.push(await ollamaModelToCatalogEntry(t.name));
+            } catch {
+              // A model with incomplete /api/show geometry is skipped rather
+              // than shown with invented numbers (see ollama.ts showOllamaModel).
+            }
+          }
+        }
+        const ranked = rankForSwitch(models, hw, reports, leaderboard, context);
+        return json(res, 200, {
+          context,
+          ollamaAvailable: await isOllamaRunning(),
+          candidates: ranked.map(serializeCandidate),
+        });
       }
 
       if (path === "/api/switch/activate" && req.method === "POST") {
@@ -197,7 +228,7 @@ export function createApiServer(dashboardRoot: string) {
       if (connectMatch && req.method === "GET") {
         const s = readState();
         if (!s) return json(res, 409, { error: "no server running" });
-        const m = findModel(loadCatalog(), s.modelId);
+        const m = await resolveModel(loadCatalog(), s.modelId);
         const text =
           connectMatch[1] === "claude" ? connectClaude(m) : connectMatch[1] === "opencode" ? connectOpencode(m) : connectAider(m);
         return json(res, 200, { text });

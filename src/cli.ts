@@ -3,14 +3,15 @@
 
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { MODELS_DIR, ensureDirs, findModel, loadCatalog } from "./catalog.js";
+import { MODELS_DIR, ensureDirs, findModel, loadCatalog, resolveModel } from "./catalog.js";
 import { DEFAULT_CONTEXT, rankFits } from "./fit.js";
 import { connectAider, connectClaude, connectOpencode } from "./connect.js";
 import { GRADE_MEANING, runExam } from "./probes.js";
 import { fetchLeaderboard } from "./leaderboard.js";
 import { pullModel, pullRuntime } from "./pull.js";
 import { formatBytes, scanHardware } from "./scan.js";
-import { readState, startServer, stopServer } from "./serve.js";
+import { activeBaseUrl, readState, requestModelFor, startServer, startOllamaServer, stopServer } from "./serve.js";
+import { OLLAMA_BASE_URL } from "./ollama.js";
 import { rankForSwitch } from "./switch.js";
 import { REPORTS_DIR, loadAllReports, loadReport, saveReport } from "./reports.js";
 import { startApiServer, API_PORT } from "./api.js";
@@ -76,10 +77,18 @@ async function cmdServe() {
     console.log(stopServer() ? "server stopped" : "no server running");
     return;
   }
+  const context = arg("--context") ? Number(arg("--context")) : undefined;
+  const ollamaTag = arg("--ollama");
+  if (ollamaTag) {
+    console.log(`starting ollama:${ollamaTag} (ctx ${context ?? DEFAULT_CONTEXT})...`);
+    const s = await startOllamaServer(ollamaTag, context ?? DEFAULT_CONTEXT);
+    console.log(`ready: ${OLLAMA_BASE_URL} (backend: ollama, context ${s.context})`);
+    console.log(`endpoints: OpenAI /v1/chat/completions | Anthropic /v1/messages`);
+    return;
+  }
   const hw = scanHardware(MODELS_DIR);
   const models = loadCatalog();
   const id = process.argv[3] && !process.argv[3].startsWith("--") ? process.argv[3] : null;
-  const context = arg("--context") ? Number(arg("--context")) : undefined;
   const fits = rankFits(models, hw, context ?? DEFAULT_CONTEXT).filter((f) =>
     existsSync(join(MODELS_DIR, f.quant.filename))
   );
@@ -95,7 +104,7 @@ async function cmdDoctor() {
   const s = readState();
   if (!s) throw new Error("no server running; run mb serve first (doctor examines the LIVE server)");
   console.log(`examining ${s.modelId} at context ${s.context} — 5 probes, ~1-3 min on laptop hardware\n`);
-  const report = await runExam(s.modelId, s.context);
+  const report = await runExam(s.modelId, s.context, { baseUrl: activeBaseUrl(s), requestModel: requestModelFor(s) });
   for (const r of report.results) {
     const mark = r.pass ? "PASS" : "FAIL";
     const speed = r.tokensPerSec ? ` ${r.tokensPerSec.toFixed(1)} tok/s` : "";
@@ -111,7 +120,7 @@ async function cmdConnect() {
   const target = process.argv[3];
   const s = readState();
   if (!s) throw new Error("no server running; run mb serve first");
-  const m = findModel(loadCatalog(), s.modelId);
+  const m = await resolveModel(loadCatalog(), s.modelId);
   const report = loadReport(s.modelId);
   if (!report) {
     console.log("WARNING: this model has not passed mb doctor on this machine — config below is UNVERIFIED\n");
@@ -130,9 +139,9 @@ async function cmdConnect() {
 async function cmdStatus() {
   const s = readState();
   if (!s) return console.log("server: not running");
-  const m = findModel(loadCatalog(), s.modelId);
+  const m = await resolveModel(loadCatalog(), s.modelId);
   const report = loadReport(s.modelId);
-  console.log(`server: running (pid ${s.pid}) — ${m.displayName}, context ${s.context}`);
+  console.log(`server: running (${s.backend}${s.backend === "llama-server" ? `, pid ${s.pid}` : ""}) — ${m.displayName}, context ${s.context}`);
   console.log(`doctor: ${report ? `grade ${report.grade} (${report.when})` : "not yet examined"}`);
 }
 
@@ -201,6 +210,7 @@ usage: mb <command>
   pull <model> [--quant Q] download model + runtime (resumable, sha256-verified)
   pull --runtime           download just the llama.cpp runtime
   serve [<model>] [--context N] [--stop]   run the local server (Anthropic+OpenAI APIs)
+  serve --ollama <tag> [--context N]       activate a model already pulled into Ollama
   doctor                   the agentic readiness exam: 5 probes, grade A-F
   connect <claude|opencode|aider>          wire an agent to the VERIFIED local server
   status                   server + verification status

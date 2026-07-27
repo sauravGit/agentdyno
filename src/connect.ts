@@ -2,7 +2,7 @@
 // each connector applies guardrails derived from researched failure modes
 // (context ceilings, tool-count limits, template correctness).
 
-import { BASE_URL, readState } from "./serve.js";
+import { activeBaseUrl, readState, requestModelFor } from "./serve.js";
 import type { CatalogModel } from "./types.js";
 
 function requireRunning() {
@@ -13,11 +13,17 @@ function requireRunning() {
 
 export function connectClaude(model: CatalogModel): string {
   const s = requireRunning();
-  return `# Claude Code -> local ${model.displayName} (llama-server speaks the Anthropic Messages API natively)
-export ANTHROPIC_BASE_URL="${BASE_URL}"
+  const baseUrl = activeBaseUrl(s);
+  const requestModel = requestModelFor(s);
+  const engineNote =
+    s.backend === "ollama"
+      ? "Ollama speaks the Anthropic Messages API natively (>= v0.14)"
+      : "llama-server speaks the Anthropic Messages API natively";
+  return `# Claude Code -> local ${model.displayName} (${engineNote})
+export ANTHROPIC_BASE_URL="${baseUrl}"
 export ANTHROPIC_AUTH_TOKEN="magix-box-local"
-export ANTHROPIC_MODEL="${model.id}"
-export ANTHROPIC_SMALL_FAST_MODEL="${model.id}"
+export ANTHROPIC_MODEL="${requestModel}"
+export ANTHROPIC_SMALL_FAST_MODEL="${requestModel}"
 # then run: claude
 
 # Guardrails (from magix-box fit math for THIS machine):
@@ -32,6 +38,8 @@ export ANTHROPIC_SMALL_FAST_MODEL="${model.id}"
 
 export function connectOpencode(model: CatalogModel): string {
   const s = requireRunning();
+  const baseUrl = activeBaseUrl(s);
+  const requestModel = requestModelFor(s);
   return `# OpenCode -> local ${model.displayName}
 # Add to ~/.config/opencode/opencode.json under "provider":
 {
@@ -39,22 +47,24 @@ export function connectOpencode(model: CatalogModel): string {
     "magix-box": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "magix-box (local)",
-      "options": { "baseURL": "${BASE_URL}/v1" },
+      "options": { "baseURL": "${baseUrl}/v1" },
       "models": {
-        "${model.id}": { "name": "${model.displayName}", "limit": { "context": ${s.context}, "output": 8192 } }
+        "${requestModel}": { "name": "${model.displayName}", "limit": { "context": ${s.context}, "output": 8192 } }
       }
     }
   }
 }
-# then: opencode -m magix-box/${model.id}`;
+# then: opencode -m magix-box/${requestModel}`;
 }
 
 export function connectAider(model: CatalogModel): string {
   const s = requireRunning();
+  const baseUrl = activeBaseUrl(s);
+  const requestModel = requestModelFor(s);
   return `# Aider -> local ${model.displayName}
-export OPENAI_API_BASE="${BASE_URL}/v1"
+export OPENAI_API_BASE="${baseUrl}/v1"
 export OPENAI_API_KEY="magix-box-local"
-aider --model openai/${model.id} \\
+aider --model openai/${requestModel} \\
   --map-tokens 1024
 # Guardrail: server context is ${s.context} tokens (no silent 2k truncation:
 # magix-box sets the real context on the server, not the client).`;

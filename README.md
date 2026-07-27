@@ -30,6 +30,29 @@ node dist/src/cli.js doctor      # THE EXAM: 5 probes, grade A-F, tok/s
 node dist/src/cli.js connect claude   # wire an agent to the VERIFIED server
 ```
 
+## Ollama backend
+
+For privacy-conscious developers who already run (or want to run) models via
+[Ollama](https://ollama.com) rather than our managed llama-server: point AgentDyno
+at a local Ollama daemon instead.
+
+```sh
+ollama serve                         # your daemon, your process, independent of us
+ollama pull qwen2.5-coder:3b         # ollama's own registry, not ours
+node dist/src/cli.js serve --ollama qwen2.5-coder:3b
+node dist/src/cli.js doctor          # the SAME 5-probe exam, same rubric, no special-casing
+node dist/src/cli.js connect claude  # Ollama >= v0.14 speaks the Anthropic Messages API natively
+```
+
+Real per-model KV geometry (layers, KV heads, head dim, context) comes live
+from Ollama's own `/api/show`, not a hand-maintained mapping — so fit math and
+the doctor exam apply to whatever you've actually pulled, honestly. AgentDyno
+never touches ollama.com/search directly (no public JSON API exists for it);
+Ollama's own registry resolves the tag on `pull`, which is all a backend needs.
+The dashboard's switcher table lists Ollama-pulled models and our
+managed-llama.cpp catalog side by side, ranked by the same one rule: verified
+beats unverified, always.
+
 ## Switcher, dashboard, IDE
 
 - `dyno switch` — one ranked list across the whole catalog: a model VERIFIED

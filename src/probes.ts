@@ -6,7 +6,9 @@
 //   P5 long-context    — recall of early facts near the context ceiling
 // Speed is measured from llama-server timings on every probe.
 
-import { BASE_URL } from "./serve.js";
+// Backend-agnostic by design: takes a baseUrl + model name rather than
+// importing serve.ts, so the exact same probes run against llama-server OR
+// Ollama (or anything else that speaks OpenAI-style /v1/chat/completions).
 
 export interface ProbeResult {
   id: string;
@@ -72,15 +74,17 @@ const DISTRACTORS = [
 ];
 
 async function chat(
+  baseUrl: string,
+  requestModel: string,
   messages: Msg[],
   tools: unknown[],
   maxTokens = 512
 ): Promise<ChatResponse> {
-  const res = await fetch(`${BASE_URL}/v1/chat/completions`, {
+  const res = await fetch(`${baseUrl}/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "local",
+      model: requestModel,
       messages,
       tools,
       temperature: 0,
@@ -150,13 +154,21 @@ export function gradeFromProbes(
   return "C";
 }
 
-export async function runExam(modelId: string, context: number): Promise<ExamReport> {
+export async function runExam(
+  modelId: string,
+  context: number,
+  opts: { baseUrl: string; requestModel?: string }
+): Promise<ExamReport> {
+  const baseUrl = opts.baseUrl;
+  const requestModel = opts.requestModel ?? "local";
   const results: ProbeResult[] = [];
 
   // P1: single tool, must produce a well-formed call with exact content.
   results.push(
     await timed("P1", "single tool call", async () => {
       const r = await chat(
+        baseUrl,
+        requestModel,
         [
           { role: "system", content: "You are a coding agent. Use tools to act. Do not describe; act." },
           { role: "user", content: 'Create the file hello.txt containing exactly: magic-42' },
@@ -176,6 +188,8 @@ export async function runExam(modelId: string, context: number): Promise<ExamRep
   results.push(
     await timed("P2", "tool selection among 9", async () => {
       const r = await chat(
+        baseUrl,
+        requestModel,
         [
           { role: "system", content: "You are a coding agent. Use tools to act." },
           { role: "user", content: "Rename the function fetchUser to getUser everywhere in the project." },
@@ -198,14 +212,14 @@ export async function runExam(modelId: string, context: number): Promise<ExamRep
         { role: "user", content: "Read config.json and then write its \"port\" value into port.txt." },
       ];
       const tools = [WRITE_FILE, DISTRACTORS[0]];
-      const r1 = await chat(messages, tools);
+      const r1 = await chat(baseUrl, requestModel, messages, tools);
       const tc1 = firstToolCall(r1);
       if (!tc1 || tc1.function.name !== "read_file") {
         return { pass: false, detail: tc1 ? `expected read_file, got ${tc1.function.name}` : "no tool call", tps: tps(r1) };
       }
       messages.push(r1.choices[0].message);
       messages.push({ role: "tool", tool_call_id: tc1.id, content: '{"port": 7311, "host": "0.0.0.0"}' });
-      const r2 = await chat(messages, tools);
+      const r2 = await chat(baseUrl, requestModel, messages, tools);
       const tc2 = firstToolCall(r2);
       if (!tc2 || tc2.function.name !== "write_file") {
         return { pass: false, detail: tc2 ? `expected write_file, got ${tc2.function.name}` : "no second tool call", tps: tps(r2) };
@@ -221,6 +235,8 @@ export async function runExam(modelId: string, context: number): Promise<ExamRep
     await timed("P4", "tricky-string arg fidelity", async () => {
       const payload = 'console.log("a\\"b", `x${y}`);\n// done';
       const r = await chat(
+        baseUrl,
+        requestModel,
         [
           { role: "system", content: "You are a coding agent. Use tools to act." },
           { role: "user", content: `Write a file snippet.js whose content is exactly this code (preserve every character):\n\`\`\`\n${payload}\n\`\`\`` },
@@ -251,6 +267,8 @@ export async function runExam(modelId: string, context: number): Promise<ExamRep
       // at 256 tokens some models (e.g. Qwen3) get truncated mid-call and
       // finish_reason=length yields no parseable call — a false negative.
       const r = await chat(
+        baseUrl,
+        requestModel,
         [
           { role: "system", content: "You are a coding agent. Use tools to act." },
           { role: "user", content: `Here is utils.js:\n${body}\nWrite the BUILD_ID value (just the number) to build_id.txt.` },

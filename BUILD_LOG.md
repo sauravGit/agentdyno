@@ -307,3 +307,57 @@ Format: each entry = date, decision/question, answer, why, evidence.
   and bundled extension.js. NOT verified: the webview actually renders inside
   real VS Code, the terminal command actually runs correctly, the settings
   prompt UX. This gap is stated here rather than claimed as tested.
+
+### D-018: Ollama backend (user-directed: privacy-first, "any model from ollama.com/search")
+- User's real requirement, restated precisely: developers who don't want code
+  reaching Anthropic's servers, willing to run any model that fits from
+  Ollama's library, wiring it into their own coding setup.
+- Fact-checked before building anything: ollama.com/search has NO public JSON
+  API (checked the rendered page directly - server-rendered, no __NEXT_DATA__
+  payload, nothing to scrape cleanly). Ollama's REST API (/api/pull, /api/tags,
+  /api/show, /v1/chat/completions, and a real Anthropic-compatible /v1/messages
+  per docs/api/anthropic-compatibility.mdx) IS real, documented, and verified
+  live. Decision: don't scrape the search page; let Ollama's own registry
+  resolve tags on `pull`, exactly like the CLI already does.
+- LIVE VERIFICATION (not just docs-reading): installed Ollama via Homebrew,
+  started the real daemon (nohup, detached from this session), pulled
+  qwen2.5-coder:3b, and inspected real /api/tags + /api/show JSON firsthand.
+  Confirmed /api/show returns real KV geometry under family-prefixed keys
+  (qwen2.attention.head_count_kv=2, qwen2.block_count=36, etc.) - this means
+  fit math for Ollama models is derived from the daemon's own truth, never a
+  hand-maintained HF-repo mapping.
+- HONEST FINDING (matches the earlier llama.cpp result exactly): tested our
+  existing P1 probe payload directly against Ollama's real
+  /v1/chat/completions for qwen2.5-coder:3b - it returned the tool call as
+  JSON-in-markdown inside `content`, NOT a real `tool_calls` array. Our
+  UNMODIFIED firstToolCall() in probes.ts already treats that as "no call" ->
+  correctly fails. Zero changes needed to probes.ts logic to reuse it against
+  a second backend; only its transport args (baseUrl, requestModel) were
+  parameterized out of the serve.ts import it used to hardcode.
+- New src/ollama.ts: isOllamaRunning, listOllamaModels, showOllamaModel
+  (derives head_dim from embedding_length/head_count when rope.dimension_count
+  is absent - verified against the real payload), ollamaModelToCatalogEntry
+  (synthesizes a fit.ts-compatible CatalogModel on the fly; catalog prior is
+  "B" only if Ollama's own capabilities array reports "tools", else "C" - never
+  a silent "A", consistent with every other unverified prior in this project),
+  pullOllamaModel (streams the real NDJSON progress from /api/pull).
+- serve.ts: added a Backend discriminator ("llama-server" | "ollama") to
+  ServeState; activeBaseUrl()/requestModelFor() abstract the transport so
+  probes.ts, connect.ts, and the API server don't special-case per backend.
+  stopServer() never kills Ollama's own daemon process (it's independent,
+  other tools may depend on it) - only forgets our bookkeeping.
+- catalog.ts: added resolveModel() - findModel() for static catalog ids,
+  live ollamaModelToCatalogEntry() for "ollama:<tag>" ids. Both cli.ts and
+  api.ts's connect/status paths now use it instead of assuming a static entry.
+- FULL LIVE END-TO-END TEST (real daemon, real model, no mocks):
+  `dyno serve --ollama qwen2.5-coder:3b` -> `dyno doctor` (grade F, matching
+  the manual curl test exactly) -> `dyno connect claude` (correct
+  ANTHROPIC_BASE_URL=127.0.0.1:11434, correct ANTHROPIC_MODEL=qwen2.5-coder:3b,
+  correctly warned "grade F, try a bigger model") -> `dyno status`
+  (correctly shows backend: ollama, no fake pid). Also verified via the
+  dashboard API (/api/switch lists the ollama model in the SAME ranked table
+  as the llama.cpp catalog, graded F not F?) and screenshotted the live
+  dashboard rendering it.
+- Test suite: 5 new tests in test/ollama.test.js using fixtures captured
+  VERBATIM from the real daemon responses above (not invented shapes).
+  32/32 total tests passing.

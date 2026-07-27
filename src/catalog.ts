@@ -4,6 +4,7 @@ import { readFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import os from "node:os";
 import type { CatalogModel } from "./types.js";
+import { ollamaModelToCatalogEntry } from "./ollama.js";
 
 export const HOME = join(os.homedir(), ".magix-box");
 export const MODELS_DIR = join(HOME, "models");
@@ -29,6 +30,18 @@ export function loadCatalog(): CatalogModel[] {
     } catch {}
   }
   throw new Error("catalog.json not found; reinstall magix-box");
+}
+
+/**
+ * Resolve a model id whether it's a static catalog entry or a live
+ * `ollama:<tag>` id (which has no catalog.json entry — it's synthesized
+ * on demand from the Ollama daemon's own metadata, see ollama.ts).
+ */
+export async function resolveModel(models: CatalogModel[], id: string): Promise<CatalogModel> {
+  if (id.startsWith("ollama:")) {
+    return ollamaModelToCatalogEntry(id.slice("ollama:".length));
+  }
+  return findModel(models, id);
 }
 
 export function findModel(models: CatalogModel[], idOrPrefix: string): CatalogModel {

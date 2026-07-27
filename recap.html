@@ -123,6 +123,26 @@ a webview) rather than a second implementation of the product logic.
 and click it — stated plainly rather than claimed as tested.</li>
 </ul>
 
+<h2>// v0.3.0 — Ollama backend (privacy-first: no code reaches Anthropic's servers)</h2>
+<p>Clarified requirement: developers who specifically don't want code leaving their machine to any
+vendor, willing to run whatever open model fits from Ollama's library. Fact-checked first:
+ollama.com/search has no public JSON API to scrape; Ollama's REST API (<span class="mono">/api/pull,
+/api/tags, /api/show</span>, plus a real Anthropic-compatible <span class="mono">/v1/messages</span>)
+is real and documented — verified by installing Ollama locally and pulling a model, not by reading
+docs alone.</p>
+<ul>
+<li><span class="mono">dyno serve --ollama &lt;tag&gt;</span> — activates a model already pulled
+into your own Ollama daemon (which AgentDyno never starts, kills, or otherwise owns).</li>
+<li>Fit math for Ollama models comes from the daemon's own <span class="mono">/api/show</span> —
+real KV geometry, not a hand-maintained mapping.</li>
+<li>The doctor exam runs UNMODIFIED against Ollama's endpoint (only the transport target changed).
+Honest finding, reproduced live: the same 3B model that failed via llama-server also fails via
+Ollama — it returns the tool call as JSON-in-markdown text, not a real <span class="mono">tool_calls</span>
+array. Graded F, correctly, by the exam that already existed.</li>
+<li>The switcher table lists Ollama-pulled and llama.cpp-catalog models side by side, ranked by the
+same one rule as everywhere else in this project: verified beats unverified, always.</li>
+</ul>
+
 <h2>// deliverables map</h2>
 <table class="map">
 <tr><th>artifact</th><th>what it is</th></tr>
@@ -140,7 +160,7 @@ and click it — stated plainly rather than claimed as tested.</li>
 <tr><td><a href="brand/LAUNCH_VIDEO_SCRIPT.md">LAUNCH_VIDEO_SCRIPT.md</a></td><td>Shot-by-shot video script</td></tr>
 <tr><td><a href="site/certificates/qwen3-8b.html">certificates/*.html</a></td><td>Printable per-model calibration certificates</td></tr>
 <tr><td><a href="src/catalog.json">catalog.json</a></td><td>8 models, sizes + SHA-256 + KV geometry from live Hugging Face metadata</td></tr>
-<tr><td><a href="BUILD_LOG.md">BUILD_LOG.md</a></td><td>17 decisions logged, every self-answered question, every caught bug</td></tr>
+<tr><td><a href="BUILD_LOG.md">BUILD_LOG.md</a></td><td>18 decisions logged, every self-answered question, every caught bug</td></tr>
 </table>
 
 <h2>// guardrails held</h2>

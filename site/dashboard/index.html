@@ -70,6 +70,7 @@ pre.out{background:#0000002a;border:1px solid var(--line);border-radius:6px;padd
 
   <div class="panel">
     <h2>// switcher — verified grade always outranks an unverified prior</h2>
+    <p class="small" id="ollamaNote" style="margin-bottom:10px">checking for a local Ollama daemon...</p>
     <table>
       <thead><tr><th>model</th><th>quant</th><th>grade</th><th>verdict</th><th>external</th><th></th></tr></thead>
       <tbody id="switchBody"><tr><td colspan="6" class="mono">loading...</td></tr></tbody>
@@ -130,6 +131,9 @@ async function loadScan() {
 
 async function loadSwitch() {
   const data = await api("/api/switch");
+  $("#ollamaNote").textContent = data.ollamaAvailable
+    ? "Ollama daemon detected — its pulled models are included below, graded the same way as everything else."
+    : "No Ollama daemon detected at 127.0.0.1:11434 — start `ollama serve` to include its models here.";
   $("#switchBody").innerHTML = data.candidates.map((c) => `
     <tr>
       <td>${c.displayName}</td>
