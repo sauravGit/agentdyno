@@ -224,3 +224,35 @@ Format: each entry = date, decision/question, answer, why, evidence.
   rules exist, the script (brand/LAUNCH_VIDEO_SCRIPT.md) may need a pass.
 - [CUT, logged] Windows path designed but untested (no Windows machine);
   repeat-N probe stability (O2) deferred; MLX backend deferred to future work.
+
+### D-015: Model switcher + leaderboard signal (user-directed scope expansion)
+- User asked for a "one-click, benchmark-based model switcher" folding in
+  llmfit/Athanor-style auto-selection, a UI, and IDE connectors. Corrected an
+  expectation first: no laptop-runnable open model is competitive with
+  Opus/Fable-class frontier models — that framing was not accepted silently.
+- Chose Aider's polyglot coding leaderboard (github.com/Aider-AI/aider,
+  aider/website/_data/polyglot_leaderboard.yml) as the external signal: real,
+  fetchable, structured (verified 69 entries, pass_rate_2 field). Added
+  js-yaml as the one new runtime dependency (justified: hand-rolling a YAML
+  parser for correctness-critical external data is worse than one small,
+  well-maintained pure-JS lib).
+- HONEST FINDING: matched against our real 8-model catalog, ZERO models get
+  an external score. The leaderboard only covers 32B+ variants of families we
+  catalog at 3-30B (laptop-sized). Rather than borrow a bigger sibling's
+  score, matchExternalScore() requires same family AND params within 25%,
+  else reports "no data" explicitly. This is disclosed, not hidden.
+- Switcher rule (rankForSwitch, src/switch.ts): a model VERIFIED by `mb doctor`
+  on this machine always outranks an unverified catalog prior, regardless of
+  letter grade — because we already proved priors can be wrong (D-011: Qwen2.5-
+  Coder-7B was cataloged A, measured F). Within the same verified/unverified
+  band: grade, then external score (rare), then fit comfort, then size.
+- Bug caught by live-testing before shipping: initial "verified" check used
+  exact context match, so Qwen3-8B's real grade-B report (examined at 21535)
+  was invisible when `switch` asked at the default 16384, showing "A?
+  unverified" instead of its true "B verified" — the opposite of the product's
+  purpose. Fixed to "report.context >= requested" (a passing exam at a larger
+  context also covers a smaller ask; not vice versa, since long-context
+  recall gets harder, not easier, as context grows). Locked with tests for
+  both directions.
+- New CLI: `mb switch` (ranked list), `mb switch <id>` / `mb switch --activate`
+  (pull+serve the pick in one command) — the "one-click" UX requested.

@@ -22,8 +22,9 @@
     "catalog": "npm run build && node dist/tools/build-catalog.js"
   },
   "devDependencies": {
-    "typescript": "^5.6.0",
-    "@types/node": "^22.0.0"
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
   },
   "repository": {
     "type": "git",
@@ -37,5 +38,8 @@
     "llama.cpp",
     "benchmark",
     "tool-calling"
-  ]
+  ],
+  "dependencies": {
+    "js-yaml": "^5.2.2"
+  }
 }

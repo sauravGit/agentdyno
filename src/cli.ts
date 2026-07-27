@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 // magix-box CLI — mb <command>
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { HOME, MODELS_DIR, ensureDirs, findModel, loadCatalog } from "./catalog.js";
 import { DEFAULT_CONTEXT, rankFits } from "./fit.js";
 import { connectAider, connectClaude, connectOpencode } from "./connect.js";
 import { GRADE_MEANING, runExam, type ExamReport } from "./probes.js";
+import { fetchLeaderboard } from "./leaderboard.js";
 import { pullModel, pullRuntime } from "./pull.js";
 import { formatBytes, scanHardware } from "./scan.js";
 import { readState, startServer, stopServer } from "./serve.js";
+import { rankForSwitch } from "./switch.js";
 
 const REPORTS_DIR = join(HOME, "reports");
 
@@ -99,6 +101,17 @@ export function loadReport(modelId: string): ExamReport | null {
   return existsSync(p) ? (JSON.parse(readFileSync(p, "utf8")) as ExamReport) : null;
 }
 
+export function loadAllReports(): Record<string, ExamReport | undefined> {
+  if (!existsSync(REPORTS_DIR)) return {};
+  const out: Record<string, ExamReport | undefined> = {};
+  for (const f of readdirSync(REPORTS_DIR)) {
+    if (!f.endsWith(".json")) continue;
+    const id = f.slice(0, -5);
+    out[id] = JSON.parse(readFileSync(join(REPORTS_DIR, f), "utf8")) as ExamReport;
+  }
+  return out;
+}
+
 async function cmdDoctor() {
   const s = readState();
   if (!s) throw new Error("no server running; run mb serve first (doctor examines the LIVE server)");
@@ -144,12 +157,59 @@ async function cmdStatus() {
   console.log(`doctor: ${report ? `grade ${report.grade} (${report.when})` : "not yet examined"}`);
 }
 
+async function cmdSwitch() {
+  const target = process.argv[3] && !process.argv[3].startsWith("--") ? process.argv[3] : null;
+  const activateTop = has("--activate") || target !== null;
+  const hw = scanHardware(MODELS_DIR);
+  const models = loadCatalog();
+  const reports = loadAllReports();
+  let leaderboard: Awaited<ReturnType<typeof fetchLeaderboard>> = [];
+  if (!has("--offline")) {
+    try {
+      leaderboard = await fetchLeaderboard();
+    } catch (e) {
+      console.log(`(leaderboard unavailable, ranking on doctor grades only: ${(e as Error).message})`);
+    }
+  }
+  const ranked = rankForSwitch(models, hw, reports, leaderboard);
+
+  if (!activateTop) {
+    console.log("switcher ranking (verified grades always outrank unverified priors):\n");
+    console.log("model                                quant    grade  verdict        external");
+    for (const c of ranked) {
+      const name = c.fit.model.displayName.padEnd(36);
+      const quant = c.fit.quant.quant.padEnd(8);
+      const grade = (c.verified ? c.gradeLabel : c.gradeLabel).padEnd(6);
+      const verdict = MODE_LABEL[c.fit.mode].padEnd(14);
+      const ext = c.external.matched ? `${c.external.entry.passRate2}% (${c.external.entry.rawName})` : "no data";
+      console.log(`${name} ${quant} ${grade} ${verdict} ${ext}`);
+    }
+    console.log("\ngrade column: real doctor grade (A/B/C/F) if verified on this machine, else 'X?' = untested catalog prior.");
+    console.log("run: mb switch <model-id>   to pull+serve+activate a specific pick, or mb switch --activate for the top-ranked one.");
+    return;
+  }
+
+  const pick = target ? ranked.find((c) => c.fit.model.id === findModel(models, target).id) : ranked[0];
+  if (!pick) throw new Error("no ranked candidate found");
+  if (!pick.activatable) throw new Error(`${pick.fit.model.id} does not fit this machine`);
+  console.log(`activating ${pick.fit.model.displayName} ${pick.fit.quant.quant} (${pick.verified ? "verified " + pick.gradeLabel : "unverified, prior " + pick.gradeLabel})...`);
+  await pullRuntime();
+  await pullModel(pick.fit.model, pick.fit.quant);
+  stopServer();
+  const s = await startServer(pick.fit, hw);
+  console.log(`ready: http://127.0.0.1:${s.port} (context ${s.context})`);
+  if (!pick.verified) console.log("NOTE: unverified on this machine — run mb doctor before connecting an agent.");
+}
+
 const HELP = `magix-box — prove your machine can run a coding agent, then wire it up.
 
 usage: mb <command>
 
   scan                     honest hardware report (--json)
   fit [--context N]        which models fit THIS machine, ranked (--json)
+  switch                   ranked model switcher: verified grade beats unverified prior
+  switch <model-id>        pull + serve + activate a specific model
+  switch --activate        pull + serve + activate the #1 ranked pick
   pull <model> [--quant Q] download model + runtime (resumable, sha256-verified)
   pull --runtime           download just the llama.cpp runtime
   serve [<model>] [--context N] [--stop]   run the local server (Anthropic+OpenAI APIs)
@@ -170,6 +230,7 @@ async function main() {
     doctor: cmdDoctor,
     connect: cmdConnect,
     status: cmdStatus,
+    switch: cmdSwitch,
   };
   if (!cmd || !table[cmd]) {
     console.log(HELP);
