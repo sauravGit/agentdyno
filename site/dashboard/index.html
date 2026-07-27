@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentDyno — dashboard</title>
+<style>
+:root{
+  --bg:#0B0E11;--surface:#151A21;--line:#232B35;--text:#E8EDF2;--muted:#8A97A6;
+  --accent:#3DDC97;--warn:#E8C547;--fail:#E4604E;
+  --mono:"SF Mono","JetBrains Mono","Cascadia Code",ui-monospace,Menlo,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+}
+@media (prefers-color-scheme: light){
+  :root{--bg:#F7F9FA;--surface:#FFFFFF;--line:#DCE3EA;--text:#14181D;--muted:#5A6673;--accent:#1E9E68}
+}
+:root[data-theme="dark"]{--bg:#0B0E11;--surface:#151A21;--line:#232B35;--text:#E8EDF2;--muted:#8A97A6;--accent:#3DDC97}
+:root[data-theme="light"]{--bg:#F7F9FA;--surface:#FFFFFF;--line:#DCE3EA;--text:#14181D;--muted:#5A6673;--accent:#1E9E68}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{overflow-x:hidden;max-width:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5}
+.wrap{max-width:1040px;width:100%;margin:0 auto;padding:24px 20px 60px}
+header{display:flex;align-items:center;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid var(--line);margin-bottom:24px;flex-wrap:wrap;gap:10px}
+.brand{font-family:var(--mono);font-size:19px;font-weight:600}.brand .n{color:var(--accent)}
+.pill{font-family:var(--mono);font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--line);color:var(--muted)}
+.pill.on{color:var(--accent);border-color:var(--accent)}
+.pill.off{color:var(--fail);border-color:var(--fail)}
+h2{font-family:var(--mono);font-size:16px;margin:0 0 12px;color:var(--text)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px;margin-bottom:18px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:720px){.grid2{grid-template-columns:1fr}}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-family:var(--mono);color:var(--muted);font-weight:500;text-transform:uppercase;font-size:11px;letter-spacing:.04em}
+.mono{font-family:var(--mono)}
+.grade{font-family:var(--mono);font-weight:700;padding:1px 8px;border-radius:5px;border:2px solid;display:inline-block;font-size:13px}
+.grade.A{color:var(--accent);border-color:var(--accent)}
+.grade.B{color:var(--warn);border-color:var(--warn)}
+.grade.C{color:var(--warn);border-color:var(--warn);opacity:.75}
+.grade.F{color:var(--fail);border-color:var(--fail)}
+.grade.unverified{color:var(--muted);border-color:var(--line)}
+button{font-family:var(--mono);background:var(--accent);color:#07130d;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer}
+button:hover{filter:brightness(1.08)}
+button:disabled{background:var(--line);color:var(--muted);cursor:not-allowed}
+button.ghost{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+.status-line{font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:8px}
+.status-line b{color:var(--text)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
+.kv .k{color:var(--muted);font-family:var(--mono)}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tabs button{background:transparent;border:1px solid var(--line);color:var(--muted)}
+.tabs button.active{background:var(--accent);color:#07130d;border-color:var(--accent)}
+pre.out{background:#0000002a;border:1px solid var(--line);border-radius:6px;padding:12px;font-size:12px;overflow-x:auto;white-space:pre-wrap;word-break:break-word;margin-top:10px}
+.notice{color:var(--muted);font-size:12px;margin-top:8px}
+.progress{font-family:var(--mono);font-size:12px;color:var(--accent);margin-top:8px}
+.small{font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="brand">agentd<span class="n">y</span>no <span class="small" style="font-family:var(--sans)">dashboard</span></span>
+    <span class="pill" id="serverPill">checking...</span>
+  </header>
+
+  <div class="panel">
+    <h2>// machine</h2>
+    <div class="kv" id="hwGrid"><div class="k">loading</div><div></div></div>
+  </div>
+
+  <div class="panel">
+    <h2>// switcher — verified grade always outranks an unverified prior</h2>
+    <table>
+      <thead><tr><th>model</th><th>quant</th><th>grade</th><th>verdict</th><th>external</th><th></th></tr></thead>
+      <tbody id="switchBody"><tr><td colspan="6" class="mono">loading...</td></tr></tbody>
+    </table>
+    <div class="progress" id="activationProgress"></div>
+    <p class="notice">"external" = Aider's coding-benchmark leaderboard, only shown when a real same-family/same-size match exists. Most laptop-sized models show "no data" — that is honest, not a bug.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>// active server</h2>
+      <div class="kv" id="serverGrid"><div class="k">status</div><div>not running</div></div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button id="doctorBtn" class="ghost">run doctor exam</button>
+        <button id="stopBtn" class="ghost">stop server</button>
+      </div>
+      <div class="progress" id="doctorProgress"></div>
+      <div id="doctorResult"></div>
+    </div>
+
+    <div class="panel">
+      <h2>// connect</h2>
+      <div class="tabs">
+        <button data-target="claude" class="active">claude</button>
+        <button data-target="opencode">opencode</button>
+        <button data-target="aider">aider</button>
+      </div>
+      <pre class="out" id="connectOut">select a target above (requires an active server)</pre>
+      <button id="copyBtn" class="ghost" style="margin-top:8px">copy</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const api = (path, opts) => fetch(path, opts).then((r) => r.json());
+const fmtBytes = (b) => {
+  if (b >= 1024 ** 3) return (b / 1024 ** 3).toFixed(1) + " GiB";
+  if (b >= 1024 ** 2) return (b / 1024 ** 2).toFixed(0) + " MiB";
+  return b + " B";
+};
+const MODE_LABEL = { comfortable: "comfortable", tight: "tight", "partial-offload": "gpu+cpu split", "cpu-only": "cpu only", "wont-fit": "won't fit" };
+
+function gradeClass(label) {
+  const letter = label.replace("?", "");
+  return "grade " + letter + (label.includes("?") ? " unverified" : "");
+}
+
+async function loadScan() {
+  const hw = await api("/api/scan");
+  $("#hwGrid").innerHTML = `
+    <div class="k">machine</div><div>${hw.cpuBrand} (${hw.arch}), ${hw.cores} cores</div>
+    <div class="k">memory</div><div>${fmtBytes(hw.ramBytes)} RAM</div>
+    <div class="k">accel</div><div>${hw.accel}${hw.gpuName ? " — " + hw.gpuName : ""}</div>
+    <div class="k">budgets</div><div>gpu ${fmtBytes(hw.gpuBudgetBytes)} | cpu ${fmtBytes(hw.ramBudgetBytes)}</div>
+    <div class="k">disk</div><div>${fmtBytes(hw.diskFreeBytes)} free</div>`;
+}
+
+async function loadSwitch() {
+  const data = await api("/api/switch");
+  $("#switchBody").innerHTML = data.candidates.map((c) => `
+    <tr>
+      <td>${c.displayName}</td>
+      <td class="mono">${c.quant}</td>
+      <td><span class="${gradeClass(c.gradeLabel)}">${c.gradeLabel}</span></td>
+      <td>${MODE_LABEL[c.mode]}</td>
+      <td class="small">${c.external.passRate2 !== undefined ? c.external.passRate2 + "% (" + c.external.source + ")" : c.external.note}</td>
+      <td><button data-activate="${c.modelId}" ${c.activatable ? "" : "disabled"}>${c.downloaded ? "activate" : "pull + activate"}</button></td>
+    </tr>`).join("");
+  document.querySelectorAll("[data-activate]").forEach((btn) =>
+    btn.addEventListener("click", () => activate(btn.getAttribute("data-activate")))
+  );
+}
+
+async function activate(modelId) {
+  await api("/api/switch/activate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ modelId }) });
+  poll();
+}
+
+async function poll() {
+  const s = await api("/api/status");
+  const pill = $("#serverPill");
+  if (s.server && s.serverHealthy) {
+    pill.textContent = "server: running"; pill.className = "pill on";
+  } else if (s.activation.inProgress) {
+    pill.textContent = "activating: " + s.activation.step; pill.className = "pill";
+  } else {
+    pill.textContent = "server: stopped"; pill.className = "pill off";
+  }
+  $("#activationProgress").textContent = s.activation.inProgress
+    ? `activating ${s.activation.modelId}: ${s.activation.step}...`
+    : (s.activation.error ? "activation error: " + s.activation.error : "");
+
+  if (s.server) {
+    $("#serverGrid").innerHTML = `
+      <div class="k">model</div><div>${s.server.modelId}</div>
+      <div class="k">context</div><div>${s.server.context}</div>
+      <div class="k">doctor</div><div>${s.verifiedReport ? "grade " + s.verifiedReport.grade + " (context " + s.verifiedReport.context + ")" : "not yet examined"}</div>`;
+  } else {
+    $("#serverGrid").innerHTML = `<div class="k">status</div><div>not running</div>`;
+  }
+
+  $("#doctorProgress").textContent = s.doctor.inProgress ? "exam running (1-3 min)..." : "";
+  if (!s.doctor.inProgress && s.doctor.result) {
+    const r = s.doctor.result;
+    $("#doctorResult").innerHTML = `<pre class="out">grade: ${r.grade}\n` +
+      r.results.map((p) => `${p.id} ${p.pass ? "PASS" : "FAIL"} ${p.name}`).join("\n") + `</pre>`;
+    loadSwitch(); // grades may have changed ranking
+  }
+}
+
+$("#doctorBtn").addEventListener("click", async () => {
+  const r = await api("/api/doctor", { method: "POST" });
+  if (r.error) { $("#doctorProgress").textContent = r.error; return; }
+  poll();
+});
+$("#stopBtn").addEventListener("click", async () => {
+  await api("/api/server/stop", { method: "POST" });
+  poll();
+});
+
+let activeTarget = "claude";
+document.querySelectorAll(".tabs button").forEach((btn) => btn.addEventListener("click", () => {
+  document.querySelectorAll(".tabs button").forEach((b) => b.classList.remove("active"));
+  btn.classList.add("active");
+  activeTarget = btn.getAttribute("data-target");
+  loadConnect(activeTarget);
+}));
+$("#copyBtn").addEventListener("click", () => navigator.clipboard.writeText($("#connectOut").textContent));
+
+async function loadConnect(target) {
+  const r = await api(`/api/connect/${target}`);
+  $("#connectOut").textContent = r.text ?? r.error ?? "no server running";
+}
+
+loadScan();
+loadSwitch();
+loadConnect(activeTarget);
+poll();
+setInterval(poll, 2000);
+</script>
+</body>
+</html>

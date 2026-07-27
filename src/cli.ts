@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 // magix-box CLI — mb <command>
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { HOME, MODELS_DIR, ensureDirs, findModel, loadCatalog } from "./catalog.js";
+import { MODELS_DIR, ensureDirs, findModel, loadCatalog } from "./catalog.js";
 import { DEFAULT_CONTEXT, rankFits } from "./fit.js";
 import { connectAider, connectClaude, connectOpencode } from "./connect.js";
-import { GRADE_MEANING, runExam, type ExamReport } from "./probes.js";
+import { GRADE_MEANING, runExam } from "./probes.js";
 import { fetchLeaderboard } from "./leaderboard.js";
 import { pullModel, pullRuntime } from "./pull.js";
 import { formatBytes, scanHardware } from "./scan.js";
 import { readState, startServer, stopServer } from "./serve.js";
 import { rankForSwitch } from "./switch.js";
-
-const REPORTS_DIR = join(HOME, "reports");
+import { REPORTS_DIR, loadAllReports, loadReport, saveReport } from "./reports.js";
+import { startApiServer, API_PORT } from "./api.js";
 
 function arg(flag: string): string | null {
   const i = process.argv.indexOf(flag);
@@ -91,27 +91,6 @@ async function cmdServe() {
   console.log(`endpoints: OpenAI /v1/chat/completions | Anthropic /v1/messages`);
 }
 
-function saveReport(r: ExamReport) {
-  mkdirSync(REPORTS_DIR, { recursive: true });
-  writeFileSync(join(REPORTS_DIR, `${r.modelId}.json`), JSON.stringify(r, null, 2));
-}
-
-export function loadReport(modelId: string): ExamReport | null {
-  const p = join(REPORTS_DIR, `${modelId}.json`);
-  return existsSync(p) ? (JSON.parse(readFileSync(p, "utf8")) as ExamReport) : null;
-}
-
-export function loadAllReports(): Record<string, ExamReport | undefined> {
-  if (!existsSync(REPORTS_DIR)) return {};
-  const out: Record<string, ExamReport | undefined> = {};
-  for (const f of readdirSync(REPORTS_DIR)) {
-    if (!f.endsWith(".json")) continue;
-    const id = f.slice(0, -5);
-    out[id] = JSON.parse(readFileSync(join(REPORTS_DIR, f), "utf8")) as ExamReport;
-  }
-  return out;
-}
-
 async function cmdDoctor() {
   const s = readState();
   if (!s) throw new Error("no server running; run mb serve first (doctor examines the LIVE server)");
@@ -155,6 +134,15 @@ async function cmdStatus() {
   const report = loadReport(s.modelId);
   console.log(`server: running (pid ${s.pid}) — ${m.displayName}, context ${s.context}`);
   console.log(`doctor: ${report ? `grade ${report.grade} (${report.when})` : "not yet examined"}`);
+}
+
+async function cmdDashboard() {
+  const root = new URL("../../site/dashboard", import.meta.url).pathname;
+  if (!existsSync(root)) throw new Error(`dashboard assets missing at ${root}`);
+  startApiServer(root);
+  console.log(`dashboard: http://127.0.0.1:${API_PORT}`);
+  console.log("loopback only — not reachable from outside this machine. Ctrl-C to stop.");
+  await new Promise(() => {}); // keep the process alive
 }
 
 async function cmdSwitch() {
@@ -216,6 +204,7 @@ usage: mb <command>
   doctor                   the agentic readiness exam: 5 probes, grade A-F
   connect <claude|opencode|aider>          wire an agent to the VERIFIED local server
   status                   server + verification status
+  dashboard                local web UI + API (loopback only, http://127.0.0.1:8403)
 
 Local, free, no accounts, no telemetry. Apache-2.0.`;
 
@@ -231,6 +220,7 @@ async function main() {
     connect: cmdConnect,
     status: cmdStatus,
     switch: cmdSwitch,
+    dashboard: cmdDashboard,
   };
   if (!cmd || !table[cmd]) {
     console.log(HELP);

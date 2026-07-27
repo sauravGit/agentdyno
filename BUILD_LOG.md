@@ -256,3 +256,34 @@ Format: each entry = date, decision/question, answer, why, evidence.
   both directions.
 - New CLI: `mb switch` (ranked list), `mb switch <id>` / `mb switch --activate`
   (pull+serve the pick in one command) — the "one-click" UX requested.
+
+### D-016: Local API server + web dashboard (verified live, not just compiled)
+- src/api.ts: loopback-only (127.0.0.1) node:http server, no framework
+  (consistent with the CLI's zero-runtime-framework posture). Routes: scan,
+  switch (list + activate), status (polls activation/doctor progress), doctor
+  (fire-and-forget, polled), connect/:target, server/stop. Activation and
+  doctor runs are async and tracked via in-memory state so the dashboard can
+  poll instead of holding an HTTP request open for a multi-minute exam.
+- Extracted reports.ts (save/load/loadAll) out of cli.ts so the CLI and API
+  server share one reader/writer instead of duplicating file I/O.
+- site/dashboard/index.html: on-brand (BRAND.md tokens) single-page dashboard.
+  Hardware panel, switcher table with per-row Activate, live server panel with
+  a doctor-exam button, connect-config panel with copy button. Vanilla JS,
+  polls /api/status every 2s.
+- Verified LIVE end-to-end, not just compiled: started the dashboard as a
+  detached process, called /api/switch/activate over real HTTP for qwen3-8b,
+  polled /api/status independently until the async activation settled,
+  confirmed serverHealthy:true and the correct saved doctor report (grade B)
+  surfaced automatically, then fetched /api/connect/claude and got the exact
+  verified config. Screenshotted the dashboard rendering this real data.
+- Bug caught while testing: first test run killed the dashboard's OWN process
+  while an activation was still in flight (same Node process owns both the
+  HTTP server and the async pull/serve chain) - this silently kills a running
+  activation with no error surfaced. Not fixed in code (this is inherent to a
+  single-process design and expected: don't kill the dashboard process while
+  something is activating). Documented here as an operational caveat.
+- Second bug caught while testing: dashboard's "connect" panel defaulted the
+  claude tab to visually active but never fetched its config on page load,
+  so it showed a placeholder despite the tab looking selected. Fixed
+  (loadConnect(activeTarget) now runs on load, not just on tab click) and
+  re-verified with a fresh screenshot showing the real config appear by default.
