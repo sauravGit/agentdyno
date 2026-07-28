@@ -60,8 +60,8 @@ footer .links{margin-bottom:10px}
   <h1>Don't trust "it fits."<br><em>Measure it.</em></h1>
   <p class="sub">AgentDyno is the dyno bench for local coding agents. It scans your machine,
   fits the right open model, launches it correctly — then proves, with a five-probe exam on
-  your own hardware, that the model can actually drive tools before you wire up Claude Code,
-  Goose, or Cline.</p>
+  your own hardware, that the model can actually drive tools before you wire up
+  Goose or Cline.</p>
   <a class="cta" href="#quickstart">Run the exam</a>
   <a class="cta ghost" href="https://github.com/sauravGit/agentdyno">Source (Apache-2.0)</a>
   <p class="notice">Local, free, open source. No account, no telemetry, no paid tier — the
@@ -141,7 +141,7 @@ node dist/src/cli.js fit      <span class="c"># which models fit, ranked, max ag
 node dist/src/cli.js pull qwen2.5-coder-7b
 node dist/src/cli.js serve    <span class="c"># managed llama-server, correct flags</span>
 node dist/src/cli.js doctor   <span class="c"># the exam: 5 probes, grade A-F</span>
-node dist/src/cli.js connect claude   <span class="c"># wire an agent to the VERIFIED server</span></pre></div>
+node dist/src/cli.js connect goose    <span class="c"># wire an agent to the VERIFIED server</span></pre></div>
   <p class="notice">Under the hood: honest fit math from real GGUF geometry (weights + KV cache +
   overhead vs. your platform's true budget), SHA-256-verified downloads, and llama.cpp's
   llama-server — which natively speaks both the OpenAI and Anthropic APIs.</p>
@@ -157,12 +157,13 @@ node dist/src/cli.js connect claude   <span class="c"># wire an agent to the VER
     <dd>For many agentic edits on a 16 GB laptop: no, and AgentDyno will tell you so
     with a grade instead of letting you find out through silent failures. What it gives
     you is the best verified setup your hardware can honestly support — private and free.</dd>
-    <dt>Can I point Claude Code at this?</dt>
-    <dd>Technically yes — the managed server speaks the Anthropic Messages API and
-    <span class="mono">connect claude</span> prints the env vars. Note: Anthropic has not
-    publicly stated a position on third-party backends
-    (<a href="https://github.com/anthropics/claude-code/issues/5577">claude-code#5577</a>).
-    Goose and Cline are fully-open first-class targets.</dd>
+    <dt>Why Goose and Cline, not Claude Code?</dt>
+    <dd>Deliberate: both are fully open source, both have real CLIs, and neither carries
+    Claude Code's unresolved question of whether Anthropic permits pointing it at a
+    non-Anthropic backend (<a href="https://github.com/anthropics/claude-code/issues/5577">claude-code#5577</a>,
+    still unanswered). Goose and Cline are the two first-class, battle-tested targets here —
+    see the recap for the live test that found (and fixed) an inaccurate warning in our own
+    first draft of the Goose integration.</dd>
     <dt>What data leaves my machine?</dt>
     <dd>Nothing. Downloads come from Hugging Face and GitHub; inference is local;
     there is no telemetry of any kind.</dd>

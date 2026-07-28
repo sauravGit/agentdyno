@@ -14,7 +14,7 @@ import { activeBaseUrl, readState, requestModelFor, stopServer, health, BASE_URL
 import { isOllamaRunning } from "./ollama.js";
 import { runExam, type ExamReport } from "./probes.js";
 import type { SwitchCandidate } from "./switch.js";
-import { connectClaude, connectGoose, connectCline, launchSpecFor, type AgentTarget } from "./connect.js";
+import { connectGoose, connectCline, launchSpecFor, type AgentTarget } from "./connect.js";
 import { loadAllReports, loadReport, saveReport } from "./reports.js";
 import { rankCandidates, activateCandidate } from "./activate.js";
 import { installVscodeExtension, launchInNewTerminal } from "./agentops.js";
@@ -226,8 +226,8 @@ export function createApiServer(dashboardRoot: string, options: ApiServerOptions
       if (path === "/api/setup/launch-agent" && req.method === "POST") {
         const body = await readBody(req);
         const target = body.target as AgentTarget | undefined;
-        if (!target || !["claude", "goose", "cline"].includes(target)) {
-          return json(res, 400, { error: "target must be claude, goose, or cline" });
+        if (!target || !["goose", "cline"].includes(target)) {
+          return json(res, 400, { error: "target must be goose or cline" });
         }
         const s = readState();
         if (!s) return json(res, 409, { error: "no server running" });
@@ -265,13 +265,12 @@ export function createApiServer(dashboardRoot: string, options: ApiServerOptions
         );
       }
 
-      const connectMatch = path.match(/^\/api\/connect\/(claude|goose|cline)$/);
+      const connectMatch = path.match(/^\/api\/connect\/(goose|cline)$/);
       if (connectMatch && req.method === "GET") {
         const s = readState();
         if (!s) return json(res, 409, { error: "no server running" });
         const m = await resolveModel(loadCatalog(), s.modelId);
-        const text =
-          connectMatch[1] === "claude" ? connectClaude(m) : connectMatch[1] === "goose" ? connectGoose(m) : connectCline(m);
+        const text = connectMatch[1] === "goose" ? connectGoose(m) : connectCline(m);
         return json(res, 200, { text });
       }
 

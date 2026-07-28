@@ -85,7 +85,7 @@ pick a number [1/2]:
 **Choosing `1` (UI)**: starts the dashboard server and opens
 `http://127.0.0.1:8403/setup.html` in your browser — a step-by-step wizard:
 machine → pick a model → activate (live progress) → run the exam (optional)
-→ pick Claude Code / Goose / Cline / VS Code extension → done. Picking an
+→ pick Goose / Cline / VS Code extension → done. Picking an
 agent opens a new terminal window with it already connected (macOS); picking
 the VS Code extension builds, packages, and installs it automatically —
 along with the Goose + Cline CLIs and Cline's own VS Code extension.
@@ -301,41 +301,46 @@ Same laptop, different model, night-and-day difference — see it for yourself.
 
 **Input:**
 ```sh
-node dist/src/cli.js connect claude
+node dist/src/cli.js connect goose
 ```
 
 **Expected output** (real captured run):
 ```
-verified: grade F on this machine (7/27/2026, 11:09:06 PM)
+verified: grade F on this machine (7/28/2026, 12:16:49 AM)
 
 WARNING: doctor grade is below agent-ready; expect silent failures. Try a bigger/graded-A model.
 
-# Claude Code -> local Qwen2.5 Coder 3B Instruct (llama-server speaks the Anthropic Messages API natively)
-export ANTHROPIC_BASE_URL="http://127.0.0.1:8402"
-export ANTHROPIC_AUTH_TOKEN="magix-box-local"
-export ANTHROPIC_MODEL="qwen2.5-coder-3b"
-export ANTHROPIC_SMALL_FAST_MODEL="qwen2.5-coder-3b"
-# then run: claude
+# Goose -> local Qwen2.5 Coder 3B Instruct
+export GOOSE_PROVIDER="openai"
+export GOOSE_MODEL="qwen2.5-coder-3b"
+export OPENAI_HOST="http://127.0.0.1:8402"
+export OPENAI_BASE_PATH="v1/chat/completions"
+export OPENAI_API_KEY="magix-box-local"
+goose run --model qwen2.5-coder-3b
+# or: goose session
 
-# Guardrails (from magix-box fit math for THIS machine):
-#  - server context is 32768 tokens; long agent sessions will compact early
-#  - local 3.1B-class models are weaker than frontier models; expect
-#    slower, simpler edits. Keep MCP servers/tools minimal (small models degrade
-#    past ~5 tools).
-# NOTE: Anthropic has not publicly stated whether pointing Claude Code at
-# non-Anthropic backends is permitted (github.com/anthropics/claude-code/issues/5577).
-# Fully-open alternatives with first-class support here: mb connect goose | cline
+# Guardrail: server context is 32768 tokens; long sessions will compact early.
+# local 3.1B-class models are weaker than frontier models. Goose's
+# reliability tracks your `dyno doctor` grade directly — battle-tested: a
+# grade-F model here returned the tool call as text (no file written); a
+# grade-B model executed it correctly. Run doctor before trusting this.
 ```
 
 **What to check:** notice the WARNING — it only appears because the grade is
 below B. Re-run this after switching to a graded-B+ model (Step 7's optional
-part) and the warning should disappear.
+part) and the warning should disappear. If you have the real Goose CLI
+installed (`brew install block-goose-cli`), you can literally paste this
+output into your terminal and it will connect — that's exactly how this
+project verified it live (see BUILD_LOG.md D-025).
 
 **Also try:**
 ```sh
-node dist/src/cli.js connect goose
 node dist/src/cli.js connect cline
 ```
+AgentDyno deliberately does not support Claude Code as a connect target —
+Anthropic has never publicly stated whether pointing it at a non-Anthropic
+backend is permitted. Goose and Cline are this project's two first-class,
+fully-open targets.
 Each prints a different, correct config for that specific tool.
 
 ---
@@ -391,7 +396,7 @@ loopback only — not reachable from outside this machine. Ctrl-C to stop.
 - A **// switcher** table matching your `switch` output, with an
   **activate** / **pull + activate** button per row
 - A **// active server** panel with a **run doctor exam** button
-- A **// connect** panel with tabs for claude / goose / cline that show
+- A **// connect** panel with tabs for goose / cline that show
   real config text (only after a server is running)
 
 Click **activate** on any row and watch the page poll and update itself over
@@ -422,7 +427,7 @@ endpoints: OpenAI /v1/chat/completions | Anthropic /v1/messages
 **Then run the exact same commands as before:**
 ```sh
 node dist/src/cli.js doctor
-node dist/src/cli.js connect claude
+node dist/src/cli.js connect goose
 ```
 **Expected output:** identical shape to Step 7/8, just sourced from Ollama
 instead of our managed llama-server. `status` will show `backend: ollama`.

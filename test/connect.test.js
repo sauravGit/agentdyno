@@ -1,13 +1,16 @@
 // Regression test for a real bug caught while writing TESTING.md: connect.ts
 // was reusing serve.ts's requestModelFor() (which returns the internal
 // sentinel "local" for the llama-server backend, correct for API request
-// bodies) as the USER-FACING model name too, so `dyno connect claude` printed
-// ANTHROPIC_MODEL="local" instead of the real model id. Fixed by introducing
+// bodies) as the USER-FACING model name too, so connect configs printed
+// e.g. GOOSE_MODEL="local" instead of the real model id. Fixed by introducing
 // publicModelId(): llama-server backend shows the catalog id, ollama backend
 // still shows the real pulled tag (since Ollama actually routes on it).
+//
+// Goose and Cline are the sole supported targets — Claude Code, OpenCode, and
+// Aider were all dropped per explicit scope changes.
 import { test } from "node:test";
 import assert from "node:assert";
-import { connectClaudeWith, connectGooseWith, connectClineWith, launchSpecFor } from "../dist/src/connect.js";
+import { connectGooseWith, connectClineWith, launchSpecFor } from "../dist/src/connect.js";
 
 const model = (over = {}) => ({
   id: "qwen2.5-coder-3b", family: "Qwen2.5-Coder", displayName: "Qwen2.5 Coder 3B Instruct",
@@ -20,28 +23,24 @@ const llamaState = { pid: 123, modelId: "qwen2.5-coder-3b", context: 32768, port
 const ollamaState = { pid: 0, modelId: "ollama:qwen2.5-coder:3b", context: 16384, port: 11434, backend: "ollama" };
 
 test("llama-server backend: connect configs show the real catalog id, not the internal 'local' sentinel", () => {
-  const claude = connectClaudeWith(model(), llamaState);
-  assert.match(claude, /ANTHROPIC_MODEL="qwen2\.5-coder-3b"/);
-  assert.doesNotMatch(claude, /ANTHROPIC_MODEL="local"/);
-
   const goose = connectGooseWith(model(), llamaState);
   assert.match(goose, /GOOSE_MODEL="qwen2\.5-coder-3b"/);
   assert.match(goose, /OPENAI_HOST="http:\/\/127\.0\.0\.1:8402"/);
+  assert.doesNotMatch(goose, /GOOSE_MODEL="local"/);
 
   const cline = connectClineWith(model(), llamaState);
   assert.match(cline, /Model ID: qwen2\.5-coder-3b/);
   assert.match(cline, /cline -P openai-compatible -m qwen2\.5-coder-3b/);
 });
 
-test("ollama backend: connect configs use the exact pulled tag (routing depends on it)", () => {
-  const claude = connectClaudeWith(model({ id: "ollama:qwen2.5-coder:3b" }), ollamaState);
-  assert.match(claude, /ANTHROPIC_MODEL="qwen2\.5-coder:3b"/);
-  assert.match(claude, /ANTHROPIC_BASE_URL="http:\/\/127\.0\.0\.1:11434"/);
-  assert.match(claude, /Ollama speaks the Anthropic Messages API natively/);
+test("ollama backend: goose connect config uses the exact pulled tag (routing depends on it)", () => {
+  const goose = connectGooseWith(model({ id: "ollama:qwen2.5-coder:3b" }), ollamaState);
+  assert.match(goose, /GOOSE_MODEL="qwen2\.5-coder:3b"/);
+  assert.match(goose, /OPENAI_HOST="http:\/\/127\.0\.0\.1:11434"/);
 });
 
 test("guardrail text and context are still present in every target", () => {
-  for (const fn of [connectClaudeWith, connectGooseWith, connectClineWith]) {
+  for (const fn of [connectGooseWith, connectClineWith]) {
     const out = fn(model(), llamaState);
     assert.match(out, /32768/); // server context surfaced somewhere
   }
@@ -64,10 +63,4 @@ test("cline launch spec always flags the undocumented base-URL gap", () => {
   const spec = launchSpecFor("cline", model(), llamaState);
   assert.match(spec.manualStepNote, /base URL/);
   assert.deepEqual(spec.args, ["-P", "openai-compatible", "-m", "qwen2.5-coder-3b", "-k", "magix-box-local"]);
-});
-
-test("claude launch spec has no manual step needed", () => {
-  const spec = launchSpecFor("claude", model(), llamaState);
-  assert.equal(spec.manualStepNote, null);
-  assert.equal(spec.bin, "claude");
 });

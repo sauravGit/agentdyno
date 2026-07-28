@@ -2,9 +2,10 @@
 // each connector applies guardrails derived from researched failure modes
 // (context ceilings, tool-count limits, template correctness).
 //
-// Supported targets: Claude Code, Goose (Block), Cline. OpenCode and Aider
-// were dropped per a scope change — Goose and Cline are the two agents this
-// project now battle-tests and auto-installs instead.
+// Supported targets: Goose (Block) and Cline — the two agents this project
+// battle-tests and auto-installs. Claude Code, OpenCode, and Aider were all
+// dropped per explicit scope changes; Goose and Cline are the sole
+// first-class citizens now, matching their own VS Code plugins too.
 
 import { activeBaseUrl, readState, requestModelFor } from "./serve.js";
 import type { ServeState } from "./serve.js";
@@ -33,30 +34,6 @@ function publicModelId(model: CatalogModel, state: ServeState): string {
 // can exercise the real formatting logic without touching ~/.magix-box on
 // disk. The public connectX(model) functions (used by cli.ts/api.ts) are
 // thin wrappers that read the live server state and delegate.
-
-export function connectClaudeWith(model: CatalogModel, s: ServeState): string {
-  const baseUrl = activeBaseUrl(s);
-  const requestModel = publicModelId(model, s);
-  const engineNote =
-    s.backend === "ollama"
-      ? "Ollama speaks the Anthropic Messages API natively (>= v0.14)"
-      : "llama-server speaks the Anthropic Messages API natively";
-  return `# Claude Code -> local ${model.displayName} (${engineNote})
-export ANTHROPIC_BASE_URL="${baseUrl}"
-export ANTHROPIC_AUTH_TOKEN="magix-box-local"
-export ANTHROPIC_MODEL="${requestModel}"
-export ANTHROPIC_SMALL_FAST_MODEL="${requestModel}"
-# then run: claude
-
-# Guardrails (from magix-box fit math for THIS machine):
-#  - server context is ${s.context} tokens; long agent sessions will compact early
-#  - local ${model.paramsB}B-class models are weaker than frontier models; expect
-#    slower, simpler edits. Keep MCP servers/tools minimal (small models degrade
-#    past ~5 tools).
-# NOTE: Anthropic has not publicly stated whether pointing Claude Code at
-# non-Anthropic backends is permitted (github.com/anthropics/claude-code/issues/5577).
-# Fully-open alternatives with first-class support here: mb connect goose | cline`;
-}
 
 /**
  * Goose (github.com/block/goose): fully scriptable via environment variables
@@ -127,10 +104,6 @@ cline -P openai-compatible -m ${requestModel} -k magix-box-local
 # models are weaker than frontier models — expect simpler, slower edits.`;
 }
 
-export function connectClaude(model: CatalogModel): string {
-  return connectClaudeWith(model, requireRunning());
-}
-
 export function connectGoose(model: CatalogModel): string {
   return connectGooseWith(model, requireRunning());
 }
@@ -145,7 +118,7 @@ export function connectCline(model: CatalogModel): string {
 // instructions about it — so env vars and args are returned as data, not
 // embedded in comment-annotated shell text.
 
-export type AgentTarget = "claude" | "goose" | "cline";
+export type AgentTarget = "goose" | "cline";
 
 export interface LaunchSpec {
   bin: string;
@@ -160,19 +133,6 @@ export interface LaunchSpec {
 export function launchSpecFor(target: AgentTarget, model: CatalogModel, s: ServeState): LaunchSpec {
   const baseUrl = activeBaseUrl(s);
   const requestModel = publicModelId(model, s);
-  if (target === "claude") {
-    return {
-      bin: "claude",
-      args: [],
-      env: {
-        ANTHROPIC_BASE_URL: baseUrl,
-        ANTHROPIC_AUTH_TOKEN: "magix-box-local",
-        ANTHROPIC_MODEL: requestModel,
-        ANTHROPIC_SMALL_FAST_MODEL: requestModel,
-      },
-      manualStepNote: null,
-    };
-  }
   if (target === "goose") {
     return {
       bin: "goose",
@@ -229,19 +189,6 @@ export async function fetchRemoteStatus(remoteBaseUrl: string, token: string): P
   // fall back to the raw model id rather than fail the whole connect step
   // if that richer metadata isn't reachable.
   return { modelId: data.server.modelId, context: data.server.context, displayName: data.server.modelId, paramsB: NaN };
-}
-
-export function connectClaudeRemote(remote: RemoteStatus, remoteBaseUrl: string, token: string): string {
-  return `# Claude Code -> REMOTE ${remote.displayName} (on another machine, via AgentDyno LAN mode)
-export ANTHROPIC_BASE_URL="${remoteBaseUrl}"
-export ANTHROPIC_AUTH_TOKEN="${token}"
-export ANTHROPIC_MODEL="${remote.modelId}"
-export ANTHROPIC_SMALL_FAST_MODEL="${remote.modelId}"
-# then run: claude
-
-# This points at another machine's model over your LAN, through AgentDyno's
-# authenticated proxy — never at the raw inference port directly.
-# Guardrail: remote server context is ${remote.context} tokens.`;
 }
 
 export function connectGooseRemote(remote: RemoteStatus, remoteBaseUrl: string, token: string): string {

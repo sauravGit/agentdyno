@@ -6,7 +6,7 @@ import { join } from "node:path";
 import os from "node:os";
 import { MODELS_DIR, ensureDirs, findModel, loadCatalog, resolveModel } from "./catalog.js";
 import { DEFAULT_CONTEXT, rankFits } from "./fit.js";
-import { connectClaude, connectGoose, connectCline, connectClaudeRemote, connectGooseRemote, connectClineRemote, fetchRemoteStatus } from "./connect.js";
+import { connectGoose, connectCline, connectGooseRemote, connectClineRemote, fetchRemoteStatus } from "./connect.js";
 import { GRADE_MEANING, runExam } from "./probes.js";
 import { fetchLeaderboard } from "./leaderboard.js";
 import { pullModel, pullRuntime } from "./pull.js";
@@ -122,14 +122,13 @@ async function cmdDoctor() {
 
 async function cmdConnect() {
   const target = process.argv[3];
-  if (!["claude", "goose", "cline"].includes(target)) throw new Error("usage: mb connect <claude|goose|cline>");
+  if (!["goose", "cline"].includes(target)) throw new Error("usage: mb connect <goose|cline>");
 
   const remote = loadRemoteConfig();
   if (remote) {
     console.log(`using remote server: ${remote.baseUrl} (run \`dyno remote clear\` to use a local server instead)\n`);
     const status = await fetchRemoteStatus(remote.baseUrl, remote.token);
-    if (target === "claude") console.log(connectClaudeRemote(status, remote.baseUrl, remote.token));
-    else if (target === "goose") console.log(connectGooseRemote(status, remote.baseUrl, remote.token));
+    if (target === "goose") console.log(connectGooseRemote(status, remote.baseUrl, remote.token));
     else console.log(connectClineRemote(status, remote.baseUrl, remote.token));
     return;
   }
@@ -146,9 +145,8 @@ async function cmdConnect() {
       console.log("WARNING: doctor grade is below agent-ready; expect silent failures. Try a bigger/graded-A model.\n");
     }
   }
-  if (target === "claude") console.log(connectClaude(m));
-  else if (target === "goose") console.log(connectGoose(m));
-  else if (target === "cline") console.log(connectCline(m));
+  if (target === "goose") console.log(connectGoose(m));
+  else console.log(connectCline(m));
 }
 
 async function cmdStatus() {
@@ -280,7 +278,7 @@ usage: mb <command>
   serve [<model>] [--context N] [--stop]   run the local server (Anthropic+OpenAI APIs)
   serve --ollama <tag> [--context N]       activate a model already pulled into Ollama
   doctor                   the agentic readiness exam: 5 probes, grade A-F
-  connect <claude|goose|cline>              wire an agent to the VERIFIED local server
+  connect <goose|cline>                     wire an agent to the VERIFIED local server
   status                   server + verification status
   dashboard                local web UI + API (loopback only, http://127.0.0.1:8403)
   dashboard --lan          same, but reachable + discoverable on your LAN (pairing token required)

@@ -94,7 +94,7 @@ node dist/src/cli.js scan                          <span style="color:var(--mute
 node dist/src/cli.js switch                        <span style="color:var(--muted)"># ranked: verified beats unverified, always</span>
 node dist/src/cli.js switch --activate             <span style="color:var(--muted)"># one command: pull + serve the top pick</span>
 node dist/src/cli.js doctor                        <span style="color:var(--muted)"># the exam</span>
-node dist/src/cli.js connect claude                <span style="color:var(--muted)"># VERIFIED config only</span>
+node dist/src/cli.js connect goose                 <span style="color:var(--muted)"># VERIFIED config only (or: connect cline)</span>
 node dist/src/cli.js dashboard                      <span style="color:var(--muted)"># local web UI + API at 127.0.0.1:8403</span></div>
 
 <h2>// v0.2.0 — switcher, dashboard, IDE (user-directed expansion)</h2>
@@ -163,6 +163,25 @@ live) and a VS Code extension (<span class="mono">saoudrizwan.claude-dev</span>)
 <strong>no documented flag for a custom base URL</strong> — a real, verified gap, not glossed over. The
 setup wizard installs both Cline's CLI and its VS Code extension and states this limitation plainly
 rather than promising an automation that current docs don't support.</p>
+
+<h2>// v0.6.0 — Claude Code removed entirely; Goose and Cline are the ONLY targets</h2>
+<p>A further, explicit directive: drop Claude Code as a connect target completely (not just
+de-prioritize it). All <span class="mono">connect claude</span> code paths, CLI/API/UI menu entries,
+and launch specs were removed — <span class="mono">dyno connect</span> now only accepts
+<span class="mono">goose</span> or <span class="mono">cline</span>. This also resolves, by
+elimination, the one open question the earlier sections above flagged repeatedly: Anthropic's
+unanswered position on third-party backends (claude-code#5577) is now moot for this project — there
+is no Claude Code code path left to raise the question. Sections above that reference
+<span class="mono">connect claude</span> describe the state at the time they were written; left
+as-is except where a literal copy-pasteable command would otherwise break for a reader following
+along today (those were updated to <span class="mono">connect goose</span>).</p>
+<p>Also added in this pass: <strong>LAN/remote mode</strong>, live-verified over this build machine's
+real network IP (not loopback, not mocked) — a second machine can discover a running AgentDyno
+server via mDNS and use it through an authenticated proxy (the raw, unauthenticated inference port is
+never exposed to the network; only the token-gated control-plane API is). Verified: 401 on an
+unauthenticated LAN request, 200 with the correct pairing token, a real completion returned through
+the proxy using the exact headers Claude Code/Goose/Cline send, and <span class="mono">dyno remote
+discover/connect</span> finding and using the advertised server end to end.</p>
 
 <h2>// deliverables map</h2>
 <table class="map">

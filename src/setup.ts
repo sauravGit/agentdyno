@@ -139,10 +139,10 @@ async function cliWizard(repoRoot: string, rl: readline.Interface) {
   }
 
   console.log("\nwhich coding interface do you want to use?");
-  console.log("  [1] Claude Code\n  [2] Goose\n  [3] Cline\n  [4] VS Code extension (installs Goose + Cline CLIs and Cline's extension too)\n  [5] skip — I'll connect manually");
+  console.log("  [1] Goose\n  [2] Cline\n  [3] VS Code extension (installs Goose + Cline CLIs and Cline's extension too)\n  [4] skip — I'll connect manually");
   const choice = (await ask(rl, "pick a number: ")).trim();
 
-  if (choice === "4") {
+  if (choice === "3") {
     console.log("\ninstalling the VS Code extension + Goose CLI + Cline CLI + Cline's extension...");
     try {
       await installVscodeExtension(repoRoot, (l) => console.log("  " + l));
@@ -154,10 +154,10 @@ async function cliWizard(repoRoot: string, rl: readline.Interface) {
     return;
   }
 
-  const targetMap: Record<string, AgentTarget> = { "1": "claude", "2": "goose", "3": "cline" };
+  const targetMap: Record<string, AgentTarget> = { "1": "goose", "2": "cline" };
   const target = targetMap[choice];
   if (!target) {
-    console.log("\nskipped — run `dyno connect <claude|goose|cline>` any time.");
+    console.log("\nskipped — run `dyno connect <goose|cline>` any time.");
     rl.close();
     return;
   }

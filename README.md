@@ -5,7 +5,8 @@
 AgentDyno is the dyno bench for local coding agents. It scans your machine,
 finds the open models that fit, launches them correctly — and then actually
 proves, with a five-probe agentic exam on your own hardware, that a model can
-drive tools before you wire Claude Code, Goose, or Cline to it.
+drive tools before you wire Goose or Cline to it — the two open-source
+agents AgentDyno battle-tests and treats as first-class citizens.
 
 Local, free, Apache-2.0. No accounts, no telemetry, no paid tier.
 
@@ -29,9 +30,9 @@ node dist/src/cli.js setup       # guided: pick UI or CLI, ends with a connected
 ```
 
 `dyno setup` is the fast path: scan → pick a model → activate → run the exam
-→ connect Claude Code / Goose / Cline (auto-launched in a new terminal) or
-install the VS Code extension (which also installs the Goose + Cline CLIs and
-Cline's own extension) — one flow instead of the manual steps below.
+→ connect Goose / Cline (auto-launched in a new terminal) or install the
+VS Code extension (which also installs the Goose + Cline CLIs and Cline's
+own extension) — one flow instead of the manual steps below.
 
 Or run each step yourself:
 
@@ -41,7 +42,7 @@ node dist/src/cli.js fit         # which models fit, ranked, with max context
 node dist/src/cli.js pull qwen2.5-coder-7b
 node dist/src/cli.js serve       # managed llama-server: right flags, health-polled
 node dist/src/cli.js doctor      # THE EXAM: 5 probes, grade A-F, tok/s
-node dist/src/cli.js connect claude   # wire an agent to the VERIFIED server
+node dist/src/cli.js connect goose    # wire an agent to the VERIFIED server
 ```
 
 ## Ollama backend
@@ -55,7 +56,7 @@ ollama serve                         # your daemon, your process, independent of
 ollama pull qwen2.5-coder:3b         # ollama's own registry, not ours
 node dist/src/cli.js serve --ollama qwen2.5-coder:3b
 node dist/src/cli.js doctor          # the SAME 5-probe exam, same rubric, no special-casing
-node dist/src/cli.js connect claude  # Ollama >= v0.14 speaks the Anthropic Messages API natively
+node dist/src/cli.js connect goose   # or cline — same exam, same rubric, no special-casing
 ```
 
 Real per-model KV geometry (layers, KV heads, head dim, context) comes live
@@ -122,9 +123,10 @@ and SHA-256 checksums — see `tools/build-catalog.ts`.
 - llama.cpp's `llama-server` provides the runtime and natively speaks both the
   OpenAI and Anthropic APIs — AgentDyno manages it so the flags are right.
 
-NOTE: Anthropic has not publicly stated whether pointing Claude Code at
-non-Anthropic backends is permitted (anthropics/claude-code#5577). Goose and
-Cline are fully-open first-class targets here.
+AgentDyno intentionally does not support Claude Code as a connect target:
+Anthropic has never publicly stated whether pointing it at a non-Anthropic
+backend is permitted (anthropics/claude-code#5577, still unanswered). Goose
+and Cline are fully-open, unambiguous, first-class targets instead.
 
 ## License
 

@@ -107,10 +107,6 @@ a{color:var(--accent)}
   <div id="stepAgent" class="panel" style="display:none">
     <h2>// which coding interface?</h2>
     <div class="choices">
-      <button class="choice" data-choice="claude">
-        <div class="t">Claude Code</div>
-        <div class="d">Anthropic's CLI, pointed at your local model</div>
-      </button>
       <button class="choice" data-choice="goose">
         <div class="t">Goose</div>
         <div class="d">Block's open-source, MCP-native agent CLI</div>
@@ -273,9 +269,8 @@ async function finishFlow(choice) {
     return;
   }
   if (choice === "skip") {
-    const r = await api(`/api/connect/claude`).catch(() => null); // any target works to confirm server state
     $("#finishTitle").textContent = "// server is ready";
-    $("#finishBody").innerHTML = `<p>Run <code>dyno connect claude|goose|cline</code> any time to get the config.</p>`;
+    $("#finishBody").innerHTML = `<p>Run <code>dyno connect goose|cline</code> any time to get the config.</p>`;
     return;
   }
   $("#finishTitle").textContent = `// launching ${choice}`;

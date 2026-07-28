@@ -698,3 +698,23 @@ Format: each entry = date, decision/question, answer, why, evidence.
   verification above instead, consistent with this project's practice of
   preferring a real end-to-end run over a mocked unit test where feasible.
   42/42 tests passing overall.
+
+### D-027: Claude Code removed entirely — Goose and Cline are the ONLY targets
+- Explicit follow-up directive: don't just de-prioritize Claude Code, remove
+  it completely. `dyno connect` now only accepts goose|cline; all
+  connectClaude*/launchSpecFor("claude") code paths, CLI/API/UI menu entries,
+  and tests were deleted (not just hidden) across connect.ts, cli.ts, api.ts,
+  setup.ts, site/index.html, site/dashboard/{index,setup}.html, README.md,
+  TESTING.md, test/connect.test.js.
+- This resolves the previously-flagged open question (Anthropic's unanswered
+  position on third-party backends, claude-code#5577) by elimination — no
+  Claude Code code path remains to raise it.
+- recap.html: historical sections describing earlier versions were left
+  as-is (accurate at the time), except one literal copy-pasteable command
+  block that would have broken for a reader following along today — that one
+  was corrected in place, with a new dated addendum explaining the removal,
+  per this project's established practice of correcting forward.
+- Fresh live captures replaced every "captured real output" block in
+  TESTING.md that showed the now-removed `connect claude` command, so the
+  guide never shows output from a command that no longer exists.
+- 41/41 tests passing (one net removal: the claude-specific launch-spec test).

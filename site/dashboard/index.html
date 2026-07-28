@@ -94,8 +94,7 @@ pre.out{background:#0000002a;border:1px solid var(--line);border-radius:6px;padd
     <div class="panel">
       <h2>// connect</h2>
       <div class="tabs">
-        <button data-target="claude" class="active">claude</button>
-        <button data-target="goose">goose</button>
+        <button data-target="goose" class="active">goose</button>
         <button data-target="cline">cline</button>
       </div>
       <pre class="out" id="connectOut">select a target above (requires an active server)</pre>
@@ -195,7 +194,7 @@ $("#stopBtn").addEventListener("click", async () => {
   poll();
 });
 
-let activeTarget = "claude";
+let activeTarget = "goose";
 document.querySelectorAll(".tabs button").forEach((btn) => btn.addEventListener("click", () => {
   document.querySelectorAll(".tabs button").forEach((b) => b.classList.remove("active"));
   btn.classList.add("active");
