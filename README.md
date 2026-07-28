@@ -18,6 +18,9 @@ changes. Every one of those failure modes is documented across the ecosystem
 (references in `research/REPORT.md`). Memory fit is necessary, not sufficient.
 AgentDyno measures the sufficient part.
 
+New here? [**TESTING.md**](TESTING.md) is a step-by-step guide (input + real
+expected output for every command) to try every feature in ~15 minutes.
+
 ## Quickstart (macOS Apple Silicon / Intel, Linux; Windows experimental)
 
 ```sh

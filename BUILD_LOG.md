@@ -361,3 +361,40 @@ Format: each entry = date, decision/question, answer, why, evidence.
 - Test suite: 5 new tests in test/ollama.test.js using fixtures captured
   VERBATIM from the real daemon responses above (not invented shapes).
   32/32 total tests passing.
+
+### D-019: TESTING.md guide + a real bug caught while writing it
+- User asked for a step-by-step guide (input + expected output) so any new
+  user can try every feature. Rather than write it from memory, ran a full
+  fresh walkthrough on this machine with the SMALLEST catalog model
+  (qwen2.5-coder-3b, fast path) to capture genuinely real output: scan, fit,
+  pull, serve, curl smoke-test, doctor, connect (all 3 targets), status,
+  switch.
+- BUG FOUND BY DOING THIS: `dyno connect claude` printed
+  ANTHROPIC_MODEL="local" instead of the real model id. Root cause: the
+  D-018 Ollama refactor introduced requestModelFor(state), which correctly
+  returns the internal sentinel "local" for llama-server API REQUEST BODIES
+  (llama-server ignores that field) — but connect.ts's config-printing
+  functions were wrongly reusing the same function for the USER-FACING
+  ANTHROPIC_MODEL/opencode-model-key/aider---model values, which must be the
+  real, meaningful model id regardless of backend.
+- Fix: connect.ts now has publicModelId(model, state) — ollama backend still
+  uses the exact pulled tag (Ollama routes requests on it, so it must be
+  correct); llama-server backend now uses the CatalogModel's own id (correct,
+  informative, matches what the user typed in `dyno pull`/`dyno serve`).
+  Verified live across all three targets (claude/opencode/aider) and BOTH
+  backends after the fix; also re-confirmed `dyno serve --stop` still leaves
+  a real Ollama daemon running (does not kill someone else's process).
+- Also refactored connect.ts for testability: connectClaudeWith/
+  connectOpencodeWith/connectAiderWith take ServeState explicitly so tests
+  exercise real formatting logic without touching ~/.magix-box on disk;
+  connectClaude/connectOpencode/connectAider (used by cli.ts/api.ts) are thin
+  wrappers reading live state. Added test/connect.test.js (4 new tests)
+  locking this exact bug so it cannot silently regress. 35/35 tests passing.
+- Also fixed a markdown bug in the guide itself: a captured doctor-exam output
+  line contained a literal triple-backtick sequence (the model's own raw
+  output was JSON-fenced text), which would have terminated the guide's outer
+  code fence early and corrupted rendering. Caught by writing a small script
+  to track fence depth line-by-line rather than eyeballing it.
+- TESTING.md covers all 12 commands/flows (scan, fit, pull, serve, doctor,
+  connect x3, switch, dashboard, Ollama backend, cleanup) plus a
+  troubleshooting table. Linked from README.md.
