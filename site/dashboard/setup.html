@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentDyno — guided setup</title>
+<style>
+:root{
+  --bg:#0B0E11;--surface:#151A21;--line:#232B35;--text:#E8EDF2;--muted:#8A97A6;
+  --accent:#3DDC97;--warn:#E8C547;--fail:#E4604E;
+  --mono:"SF Mono","JetBrains Mono","Cascadia Code",ui-monospace,Menlo,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+}
+@media (prefers-color-scheme: light){
+  :root{--bg:#F7F9FA;--surface:#FFFFFF;--line:#DCE3EA;--text:#14181D;--muted:#5A6673;--accent:#1E9E68}
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{overflow-x:hidden;max-width:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5}
+.wrap{max-width:760px;width:100%;margin:0 auto;padding:32px 20px 60px}
+.brand{font-family:var(--mono);font-size:19px;font-weight:600;margin-bottom:6px}
+.brand .n{color:var(--accent)}
+.subtitle{color:var(--muted);font-size:14px;margin-bottom:28px}
+.steps{display:flex;gap:6px;margin-bottom:28px;flex-wrap:wrap}
+.step-dot{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid var(--line);color:var(--muted)}
+.step-dot.active{border-color:var(--accent);color:var(--accent)}
+.step-dot.done{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb, var(--accent) 12%, transparent)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:26px;margin-bottom:18px}
+h2{font-family:var(--mono);font-size:17px;margin-bottom:14px}
+p{margin-bottom:12px;font-size:14px}
+.muted{color:var(--muted);font-size:13px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px;margin-bottom:16px}
+.kv .k{color:var(--muted);font-family:var(--mono)}
+table{border-collapse:collapse;width:100%;font-size:13px;margin-bottom:14px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line)}
+th{font-family:var(--mono);color:var(--muted);font-weight:500;text-transform:uppercase;font-size:11px}
+.radiorow{cursor:pointer}
+.radiorow:hover{background:color-mix(in srgb, var(--accent) 6%, transparent)}
+.radiorow.selected{background:color-mix(in srgb, var(--accent) 12%, transparent)}
+.grade{font-family:var(--mono);font-weight:700;padding:1px 8px;border-radius:5px;border:2px solid;display:inline-block;font-size:12px}
+.grade.A{color:var(--accent);border-color:var(--accent)}
+.grade.B{color:var(--warn);border-color:var(--warn)}
+.grade.C{color:var(--warn);border-color:var(--warn);opacity:.75}
+.grade.F{color:var(--fail);border-color:var(--fail)}
+.grade.unverified{color:var(--muted);border-color:var(--line)}
+button{font-family:var(--mono);background:var(--accent);color:#07130d;border:none;border-radius:6px;
+  padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer}
+button:hover{filter:brightness(1.08)}
+button:disabled{background:var(--line);color:var(--muted);cursor:not-allowed}
+button.ghost{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+button.big{padding:14px 24px;font-size:14px;width:100%;margin-bottom:10px}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+@media(max-width:520px){.choices{grid-template-columns:1fr}}
+.choice{border:1px solid var(--line);border-radius:8px;padding:16px;cursor:pointer;text-align:left;background:transparent}
+.choice:hover{border-color:var(--accent)}
+.choice.selected{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 10%, transparent)}
+.choice .t{font-family:var(--mono);font-weight:600;font-size:14px;margin-bottom:4px;color:var(--text)}
+.choice .d{color:var(--muted);font-size:12px}
+pre.out{background:#0000002a;border:1px solid var(--line);border-radius:6px;padding:12px;font-size:12px;
+  overflow-x:auto;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:240px;overflow-y:auto}
+.progress{font-family:var(--mono);font-size:13px;color:var(--accent);margin:10px 0}
+.spinner{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--accent);
+  animation:pulse 1s ease-in-out infinite;margin-right:6px}
+@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+.done-banner{text-align:center;padding:20px}
+.done-banner .big-check{font-size:40px;color:var(--accent);margin-bottom:10px}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">agentd<span class="n">y</span>no</div>
+  <div class="subtitle">guided setup — scan, fit, serve, doctor, connect. one flow, no manual steps.</div>
+
+  <div class="steps" id="stepDots"></div>
+
+  <div id="stepMachine" class="panel" style="display:none">
+    <h2>// your machine</h2>
+    <div class="kv" id="hwGrid"><div class="k">loading</div><div></div></div>
+    <button id="toModels">Continue</button>
+  </div>
+
+  <div id="stepModels" class="panel" style="display:none">
+    <h2>// pick a model</h2>
+    <p class="muted">Verified grades (from a real exam on THIS machine) always outrank unverified catalog guesses — that ordering is the whole point.</p>
+    <table>
+      <thead><tr><th></th><th>model</th><th>grade</th><th>verdict</th></tr></thead>
+      <tbody id="modelsBody"><tr><td colspan="4" class="muted">loading...</td></tr></tbody>
+    </table>
+    <button id="toActivate" disabled>Use this model</button>
+  </div>
+
+  <div id="stepActivate" class="panel" style="display:none">
+    <h2>// setting up <span id="activateModelName"></span></h2>
+    <div class="progress" id="activateProgress"><span class="spinner"></span>starting...</div>
+  </div>
+
+  <div id="stepDoctor" class="panel" style="display:none">
+    <h2>// prove it works</h2>
+    <p>Run the agentic readiness exam now? This measures whether the model can actually drive tools on your machine — takes 1-3 minutes.</p>
+    <button id="runDoctorBtn">Run the exam</button>
+    <button id="skipDoctorBtn" class="ghost">Skip for now</button>
+    <div class="progress" id="doctorProgress"></div>
+    <div id="doctorResult"></div>
+  </div>
+
+  <div id="stepAgent" class="panel" style="display:none">
+    <h2>// which coding interface?</h2>
+    <div class="choices">
+      <button class="choice" data-choice="claude">
+        <div class="t">Claude Code</div>
+        <div class="d">Anthropic's CLI, pointed at your local model</div>
+      </button>
+      <button class="choice" data-choice="opencode">
+        <div class="t">OpenCode</div>
+        <div class="d">Fully open-source agent CLI</div>
+      </button>
+      <button class="choice" data-choice="aider">
+        <div class="t">Aider</div>
+        <div class="d">Fully open-source pair-programming CLI</div>
+      </button>
+      <button class="choice" data-choice="vscode">
+        <div class="t">VS Code extension</div>
+        <div class="d">Installs the AgentDyno panel in VS Code</div>
+      </button>
+    </div>
+    <button id="skipAgentBtn" class="ghost">Skip — I'll connect manually</button>
+  </div>
+
+  <div id="stepFinish" class="panel" style="display:none">
+    <h2 id="finishTitle">// done</h2>
+    <div id="finishBody"></div>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const api = (path, opts) => fetch(path, opts).then((r) => r.json());
+const fmtBytes = (b) => b >= 1024**3 ? (b/1024**3).toFixed(1)+" GiB" : (b/1024**2).toFixed(0)+" MiB";
+const MODE_LABEL = { comfortable: "comfortable", tight: "tight", "partial-offload": "gpu+cpu split", "cpu-only": "cpu only", "wont-fit": "won't fit" };
+const STEPS = ["machine", "models", "activate", "doctor", "agent", "finish"];
+let selectedModelId = null;
+let selectedAgent = null;
+
+function gradeClass(label) {
+  const letter = label.replace("?", "");
+  return "grade " + letter + (label.includes("?") ? " unverified" : "");
+}
+
+function renderStepDots(current) {
+  $("#stepDots").innerHTML = STEPS.map((s, i) => {
+    const idx = STEPS.indexOf(current);
+    const cls = i < idx ? "done" : i === idx ? "active" : "";
+    return `<span class="step-dot ${cls}">${i + 1}. ${s}</span>`;
+  }).join("");
+}
+
+function showStep(name) {
+  for (const s of STEPS) $("#step" + s[0].toUpperCase() + s.slice(1)).style.display = "none";
+  $("#step" + name[0].toUpperCase() + name.slice(1)).style.display = "block";
+  renderStepDots(name);
+}
+
+async function loadMachine() {
+  const hw = await api("/api/scan");
+  $("#hwGrid").innerHTML = `
+    <div class="k">machine</div><div>${hw.cpuBrand} (${hw.arch}), ${hw.cores} cores</div>
+    <div class="k">memory</div><div>${fmtBytes(hw.ramBytes)} RAM</div>
+    <div class="k">accel</div><div>${hw.accel}${hw.gpuName ? " — " + hw.gpuName : ""}</div>
+    <div class="k">budgets</div><div>gpu ${fmtBytes(hw.gpuBudgetBytes)} | cpu ${fmtBytes(hw.ramBudgetBytes)}</div>`;
+}
+
+async function loadModels() {
+  const data = await api("/api/switch");
+  const activatable = data.candidates.filter((c) => c.activatable);
+  $("#modelsBody").innerHTML = activatable.map((c, i) => `
+    <tr class="radiorow" data-id="${c.modelId}">
+      <td><input type="radio" name="model" ${i === 0 ? "checked" : ""}></td>
+      <td>${c.displayName} <span class="muted">${c.quant}</span></td>
+      <td><span class="${gradeClass(c.gradeLabel)}">${c.gradeLabel}</span></td>
+      <td>${MODE_LABEL[c.mode]}</td>
+    </tr>`).join("");
+  if (activatable.length) {
+    selectedModelId = activatable[0].modelId;
+    $("#toModels").nextElementSibling; // no-op, keep structure
+  }
+  document.querySelectorAll("#modelsBody tr").forEach((row) => {
+    row.addEventListener("click", () => {
+      document.querySelectorAll("#modelsBody tr").forEach((r) => r.classList.remove("selected"));
+      row.classList.add("selected");
+      row.querySelector("input").checked = true;
+      selectedModelId = row.getAttribute("data-id");
+      $("#toActivate").disabled = false;
+    });
+  });
+  if (activatable.length) {
+    document.querySelector("#modelsBody tr").classList.add("selected");
+    $("#toActivate").disabled = false;
+  }
+}
+
+async function activateAndPoll() {
+  const displayName = document.querySelector(`#modelsBody tr[data-id="${CSS.escape(selectedModelId)}"] td:nth-child(2)`)?.textContent ?? selectedModelId;
+  $("#activateModelName").textContent = displayName;
+  showStep("activate");
+  await api("/api/switch/activate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ modelId: selectedModelId }) });
+  for (;;) {
+    const s = await api("/api/status");
+    if (s.activation.error) {
+      $("#activateProgress").innerHTML = `<span style="color:var(--fail)">error: ${s.activation.error}</span>`;
+      return;
+    }
+    if (!s.activation.inProgress && s.serverHealthy) break;
+    $("#activateProgress").innerHTML = `<span class="spinner"></span>${s.activation.step || "working"}...`;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  $("#activateProgress").innerHTML = `<span style="color:var(--accent)">ready.</span>`;
+  setTimeout(() => showStep("doctor"), 600);
+}
+
+async function runDoctorAndPoll() {
+  $("#runDoctorBtn").disabled = true;
+  $("#skipDoctorBtn").disabled = true;
+  await api("/api/doctor", { method: "POST" });
+  for (;;) {
+    const s = await api("/api/status");
+    if (!s.doctor.inProgress) {
+      if (s.doctor.result) {
+        const r = s.doctor.result;
+        $("#doctorResult").innerHTML = `<pre class="out">grade: ${r.grade}\n` +
+          r.results.map((p) => `${p.id} ${p.pass ? "PASS" : "FAIL"} ${p.name}`).join("\n") + `</pre>`;
+      } else if (s.doctor.error) {
+        $("#doctorResult").innerHTML = `<p style="color:var(--fail)">error: ${s.doctor.error}</p>`;
+      }
+      break;
+    }
+    $("#doctorProgress").innerHTML = `<span class="spinner"></span>examining (1-3 min)...`;
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  $("#doctorProgress").textContent = "";
+  setTimeout(() => showStep("agent"), 1200);
+}
+
+function selectAgentChoice(choice) {
+  document.querySelectorAll(".choice").forEach((b) => b.classList.remove("selected"));
+  document.querySelector(`.choice[data-choice="${choice}"]`).classList.add("selected");
+  selectedAgent = choice;
+  finishFlow(choice);
+}
+
+async function finishFlow(choice) {
+  showStep("finish");
+  if (choice === "vscode") {
+    $("#finishTitle").textContent = "// installing the VS Code extension";
+    $("#finishBody").innerHTML = `<div class="progress"><span class="spinner"></span>building + packaging + installing...</div><pre class="out" id="vscodeLog"></pre>`;
+    await api("/api/setup/install-vscode", { method: "POST" });
+    for (;;) {
+      const s = await api("/api/setup/vscode-status");
+      $("#vscodeLog").textContent = s.log.join("\n");
+      if (!s.inProgress) {
+        if (s.error) {
+          $("#finishTitle").textContent = "// couldn't finish automatically";
+          $("#finishBody").innerHTML += `<p style="color:var(--fail)">${s.error}</p>`;
+        } else {
+          $("#finishTitle").textContent = "// done";
+          $("#finishBody").innerHTML = `<div class="done-banner"><div class="big-check">&#10003;</div>
+            <p>Open VS Code and click the AgentDyno icon in the activity bar.</p></div>` + $("#finishBody").innerHTML;
+        }
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    return;
+  }
+  if (choice === "skip") {
+    const r = await api(`/api/connect/claude`).catch(() => null); // any target works to confirm server state
+    $("#finishTitle").textContent = "// server is ready";
+    $("#finishBody").innerHTML = `<p>Run <code>dyno connect claude|opencode|aider</code> any time to get the config.</p>`;
+    return;
+  }
+  $("#finishTitle").textContent = `// launching ${choice}`;
+  $("#finishBody").innerHTML = `<div class="progress"><span class="spinner"></span>opening a terminal...</div>`;
+  const result = await api("/api/setup/launch-agent", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target: choice }) });
+  if (result.launched) {
+    $("#finishTitle").textContent = "// done";
+    $("#finishBody").innerHTML = `<div class="done-banner"><div class="big-check">&#10003;</div>
+      <p>${choice} is launching in a new terminal window, connected to your local model.</p></div>`;
+  } else {
+    $("#finishTitle").textContent = "// one manual step left";
+    $("#finishBody").innerHTML = `<p>${result.note ? "" : ""}</p><pre class="out">${result.note}</pre>`;
+  }
+}
+
+$("#toModels").addEventListener("click", () => { showStep("models"); loadModels(); });
+$("#toActivate").addEventListener("click", activateAndPoll);
+$("#runDoctorBtn").addEventListener("click", runDoctorAndPoll);
+$("#skipDoctorBtn").addEventListener("click", () => showStep("agent"));
+$("#skipAgentBtn").addEventListener("click", () => finishFlow("skip"));
+document.querySelectorAll(".choice").forEach((b) =>
+  b.addEventListener("click", () => selectAgentChoice(b.getAttribute("data-choice")))
+);
+
+showStep("machine");
+loadMachine();
+</script>
+</body>
+</html>

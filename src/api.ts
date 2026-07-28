@@ -6,17 +6,17 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
-import { MODELS_DIR, loadCatalog, findModel, resolveModel, ensureDirs } from "./catalog.js";
+import { MODELS_DIR, loadCatalog, resolveModel, ensureDirs } from "./catalog.js";
 import { DEFAULT_CONTEXT } from "./fit.js";
 import { scanHardware } from "./scan.js";
-import { activeBaseUrl, readState, requestModelFor, startServer, startOllamaServer, stopServer, health, BASE_URL } from "./serve.js";
-import { pullModel, pullRuntime } from "./pull.js";
-import { isOllamaRunning, listOllamaModels, ollamaModelToCatalogEntry, pullOllamaModel } from "./ollama.js";
+import { activeBaseUrl, readState, requestModelFor, stopServer, health, BASE_URL } from "./serve.js";
+import { isOllamaRunning } from "./ollama.js";
 import { runExam, type ExamReport } from "./probes.js";
-import { fetchLeaderboard } from "./leaderboard.js";
-import { rankForSwitch, type SwitchCandidate } from "./switch.js";
-import { connectAider, connectClaude, connectOpencode } from "./connect.js";
+import type { SwitchCandidate } from "./switch.js";
+import { connectAider, connectClaude, connectOpencode, launchSpecFor, type AgentTarget } from "./connect.js";
 import { loadAllReports, loadReport, saveReport } from "./reports.js";
+import { rankCandidates, activateCandidate } from "./activate.js";
+import { installVscodeExtension, launchInNewTerminal, mergeOpencodeConfig } from "./agentops.js";
 
 export const API_PORT = 8403;
 
@@ -33,9 +33,16 @@ interface DoctorRun {
   error?: string;
   result?: ExamReport;
 }
+interface VscodeInstall {
+  inProgress: boolean;
+  log: string[];
+  error?: string;
+  done?: boolean;
+}
 
 let activation: Activation = { inProgress: false };
 let doctorRun: DoctorRun = { inProgress: false };
+let vscodeInstall: VscodeInstall = { inProgress: false, log: [] };
 
 function json(res: ServerResponse, status: number, body: unknown) {
   const buf = Buffer.from(JSON.stringify(body));
@@ -81,31 +88,13 @@ async function readBody(req: IncomingMessage): Promise<any> {
 function runActivation(modelId: string, context?: number) {
   activation = { inProgress: true, modelId, step: "resolving" };
   (async () => {
-    if (modelId.startsWith("ollama:")) {
-      const tag = modelId.slice("ollama:".length);
-      activation.step = "pulling via ollama";
-      await pullOllamaModel(tag);
-      activation.step = "starting server";
-      stopServer();
-      await startOllamaServer(tag, context ?? DEFAULT_CONTEXT);
-      activation = { inProgress: false, modelId, finishedAt: new Date().toISOString() };
-      return;
-    }
-    const models = loadCatalog();
-    const model = findModel(models, modelId);
     const hw = scanHardware(MODELS_DIR);
-    const reports = loadAllReports();
-    const leaderboard = await fetchLeaderboard().catch(() => []);
-    const ranked = rankForSwitch([model], hw, reports, leaderboard, context ?? DEFAULT_CONTEXT);
-    const pick = ranked[0];
+    const ranked = await rankCandidates(hw, context ?? DEFAULT_CONTEXT);
+    const pick = ranked.find((c) => c.fit.model.id === modelId);
     if (!pick || !pick.activatable) throw new Error(`${modelId} does not fit this machine`);
-    activation.step = "downloading runtime";
-    await pullRuntime();
-    activation.step = "downloading model";
-    await pullModel(pick.fit.model, pick.fit.quant);
-    activation.step = "starting server";
-    stopServer();
-    await startServer(pick.fit, hw, { context });
+    await activateCandidate(pick, hw, (step) => {
+      activation.step = step;
+    });
     activation = { inProgress: false, modelId, finishedAt: new Date().toISOString() };
   })().catch((e) => {
     activation = { inProgress: false, modelId, error: (e as Error).message };
@@ -163,21 +152,7 @@ export function createApiServer(dashboardRoot: string) {
       if (path === "/api/switch" && req.method === "GET") {
         const context = Number(url.searchParams.get("context") ?? DEFAULT_CONTEXT);
         const hw = scanHardware(MODELS_DIR);
-        const reports = loadAllReports();
-        const leaderboard = await fetchLeaderboard().catch(() => []);
-        const models = loadCatalog();
-        if (await isOllamaRunning()) {
-          const tags = await listOllamaModels();
-          for (const t of tags) {
-            try {
-              models.push(await ollamaModelToCatalogEntry(t.name));
-            } catch {
-              // A model with incomplete /api/show geometry is skipped rather
-              // than shown with invented numbers (see ollama.ts showOllamaModel).
-            }
-          }
-        }
-        const ranked = rankForSwitch(models, hw, reports, leaderboard, context);
+        const ranked = await rankCandidates(hw, context);
         return json(res, 200, {
           context,
           ollamaAvailable: await isOllamaRunning(),
@@ -195,6 +170,42 @@ export function createApiServer(dashboardRoot: string) {
 
       if (path === "/api/server/stop" && req.method === "POST") {
         return json(res, 200, { stopped: stopServer() });
+      }
+
+      if (path === "/api/setup/install-vscode" && req.method === "POST") {
+        if (vscodeInstall.inProgress) return json(res, 409, { error: "already installing", vscodeInstall });
+        vscodeInstall = { inProgress: true, log: [] };
+        const repoRoot = join(dashboardRoot, "..", "..");
+        installVscodeExtension(repoRoot, (line) => vscodeInstall.log.push(line))
+          .then(() => {
+            vscodeInstall = { ...vscodeInstall, inProgress: false, done: true };
+          })
+          .catch((e) => {
+            vscodeInstall = { ...vscodeInstall, inProgress: false, error: (e as Error).message };
+          });
+        return json(res, 202, { started: true });
+      }
+
+      if (path === "/api/setup/vscode-status" && req.method === "GET") {
+        return json(res, 200, vscodeInstall);
+      }
+
+      if (path === "/api/setup/launch-agent" && req.method === "POST") {
+        const body = await readBody(req);
+        const target = body.target as AgentTarget | undefined;
+        if (!target || !["claude", "opencode", "aider"].includes(target)) {
+          return json(res, 400, { error: "target must be claude, opencode, or aider" });
+        }
+        const s = readState();
+        if (!s) return json(res, 409, { error: "no server running" });
+        const model = await resolveModel(loadCatalog(), s.modelId);
+        const spec = launchSpecFor(target, model, s);
+        if (target === "opencode" && spec.opencodeProviderConfig) {
+          await mergeOpencodeConfig(spec.opencodeProviderConfig);
+        }
+        const repoRoot = join(dashboardRoot, "..", "..");
+        const result = launchInNewTerminal(spec.bin, spec.args, spec.env, repoRoot);
+        return json(res, 200, result);
       }
 
       if (path === "/api/status" && req.method === "GET") {

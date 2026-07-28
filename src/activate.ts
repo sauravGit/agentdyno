@@ -10,7 +10,7 @@ import { rankForSwitch, type SwitchCandidate } from "./switch.js";
 import { fetchLeaderboard, type LeaderboardEntry } from "./leaderboard.js";
 import { loadAllReports } from "./reports.js";
 import { pullModel, pullRuntime } from "./pull.js";
-import { pullOllamaModel } from "./ollama.js";
+import { isOllamaRunning, listOllamaModels, ollamaModelToCatalogEntry, pullOllamaModel } from "./ollama.js";
 import { scanHardware } from "./scan.js";
 import { startServer, startOllamaServer, stopServer, type ServeState } from "./serve.js";
 import type { HardwareReport } from "./types.js";
@@ -41,6 +41,17 @@ export async function rankCandidates(
   context: number = DEFAULT_CONTEXT
 ): Promise<SwitchCandidate[]> {
   const models = loadCatalog();
+  if (await isOllamaRunning()) {
+    const tags = await listOllamaModels();
+    for (const t of tags) {
+      try {
+        models.push(await ollamaModelToCatalogEntry(t.name));
+      } catch {
+        // Incomplete /api/show geometry — skipped rather than shown with
+        // invented numbers (see ollama.ts showOllamaModel).
+      }
+    }
+  }
   const reports = loadAllReports();
   const leaderboard = await safeLeaderboard();
   return rankForSwitch(models, hw, reports, leaderboard, context);

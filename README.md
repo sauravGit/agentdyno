@@ -25,6 +25,16 @@ expected output for every command) to try every feature in ~15 minutes.
 
 ```sh
 npm install && npm run build     # from source (npm package planned)
+node dist/src/cli.js setup       # guided: pick UI or CLI, ends with a connected agent
+```
+
+`dyno setup` is the fast path: scan → pick a model → activate → run the exam
+→ connect Claude Code / OpenCode / Aider (auto-launched in a new terminal) or
+install the VS Code extension — one flow instead of the manual steps below.
+
+Or run each step yourself:
+
+```sh
 node dist/src/cli.js scan        # what is this machine, honestly
 node dist/src/cli.js fit         # which models fit, ranked, with max context
 node dist/src/cli.js pull qwen2.5-coder-7b

@@ -519,3 +519,54 @@ Format: each entry = date, decision/question, answer, why, evidence.
 - Verified via `expect` against a real PTY: full flow (rank -> pick top ->
   activate a cached model -> skip doctor -> skip interface) completes
   correctly end to end, exit 0, no hang, no error.
+
+### D-023: UI wizard built and verified via real headless-browser automation
+- Built site/dashboard/setup.html: a 6-step wizard (machine -> models ->
+  activate -> doctor -> agent -> finish) driven entirely by the existing
+  dashboard API plus two new endpoints.
+- New API endpoints (api.ts): POST /api/setup/install-vscode (runs the exact
+  build+package+install chain from agentops.ts, streams log lines, polled via
+  GET /api/setup/vscode-status), POST /api/setup/launch-agent {target} (opens
+  a NEW Terminal.app window on macOS with the agent connected — the browser
+  has no terminal of its own to inherit stdio into, unlike the CLI wizard).
+- Refactored for DRY correctness: factored src/agentops.ts (which/
+  installVscodeExtension/mergeOpencodeConfig/launchInNewTerminal) so setup.ts
+  and api.ts share one implementation without a circular import between them
+  (setup.ts -> api.ts for startApiServer was already one-directional; adding
+  api.ts -> setup.ts would have created a cycle, so the shared pieces moved
+  to a third module instead). Also fixed a real functional gap this refactor
+  surfaced: activate.ts's rankCandidates() never included locally-pulled
+  Ollama models, so `dyno switch`/`dyno setup`'s CLI path could never suggest
+  an already-pulled Ollama model even though the dashboard's /api/switch
+  could. Moved the ollama-inclusion logic into rankCandidates() itself so
+  every caller (CLI switch, CLI setup, dashboard API) is now consistent.
+  Re-verified via a live PTY run: an ollama-pulled model now correctly
+  appears in the CLI wizard's ranked list, which it did not before this fix.
+- VERIFIED FOR REAL via headless Chrome + the DevTools Protocol (not
+  coordinate-guessed desktop clicks, which earlier this session proved
+  unreliable and risky near the user's other open windows): scripted a CDP
+  client (ws + Runtime.evaluate) to click through the actual rendered page.
+  Confirmed: step 1 (machine) shows real hardware; clicking Continue loads
+  10 real ranked candidates from the live API with the correct top pick
+  pre-selected; clicking "Use this model" drives a real activation (observed
+  real progress states: downloading model -> starting server -> ready,
+  ~16s, using an already-cached model) and auto-advances to the doctor step;
+  skipping doctor advances to the agent-choice step; choosing "skip" lands on
+  the correct finish screen. Also called POST /api/setup/launch-agent with
+  target=aider directly (aider is not installed here) and confirmed the
+  graceful fallback: correct env vars, correct real model id
+  ("qwen3-8b", not the internal "local" sentinel used only in API request
+  bodies), correct manual-run instructions.
+- ONE PATH DELIBERATELY NOT LIVE-FIRED: target=claude, since `claude` IS on
+  this machine's PATH, and calling that endpoint for real would pop a live,
+  visible Terminal.app window running an actual nested Claude Code session
+  on the desktop — a real, consequential, visible action, matching the
+  consent bar already established earlier this session for touching the
+  user's live desktop (VS Code install, simulated clicks). Verified instead
+  by dry-running the AppleScript-escaping logic standalone and confirming
+  the constructed shell script is well-formed, and by code review against
+  AppleScript's documented string-escape sequences (\", \\, \n) — a smaller
+  but real, deliberate gap, stated here rather than silently skipped.
+- Updated TESTING.md (new "fast path: dyno setup" section, explaining the
+  piped-stdin-vs-real-terminal distinction from D-022 so a future tester
+  doesn't waste time chasing the same false alarm) and README.md.

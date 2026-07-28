@@ -62,6 +62,47 @@ Local, free, no accounts, no telemetry. Apache-2.0.
 
 ---
 
+## The fast path: `dyno setup`
+
+Everything from Step 3 through Step 8 below (scan → pick a model → activate →
+doctor → connect an agent), in one guided flow. Skip ahead here if you don't
+want to run each command by hand; come back to the individual steps if you
+want to understand or test each piece on its own.
+
+**Input:**
+```sh
+node dist/src/cli.js setup
+```
+
+**Expected output:**
+```
+AgentDyno setup — how would you like to do this?
+  [1] Guided UI in your browser (recommended)
+  [2] Guided CLI, right here
+pick a number [1/2]:
+```
+
+**Choosing `1` (UI)**: starts the dashboard server and opens
+`http://127.0.0.1:8403/setup.html` in your browser — a step-by-step wizard:
+machine → pick a model → activate (live progress) → run the exam (optional)
+→ pick Claude Code / OpenCode / Aider / VS Code extension → done. Picking an
+agent opens a new terminal window with it already connected (macOS); picking
+the VS Code extension builds, packages, and installs it automatically.
+
+**Choosing `2` (CLI)**: the same flow as plain text prompts in this terminal,
+ending with an option to launch the chosen agent directly, in this same
+window.
+
+**Important if you're testing this non-interactively** (piping answers via
+`echo`/`printf`): a plain pipe is not a real terminal, and Node's terminal
+input handling behaves differently once real network calls (the leaderboard
+fetch) happen between prompts — a piped/non-TTY stdin can end up silently
+stuck. This does **not** affect real interactive use (typing into an actual
+terminal never hits this). If you need to script it, drive it through a real
+pseudo-terminal instead, e.g. with `expect` rather than a plain pipe.
+
+---
+
 ## 2. Run the test suite (proves the logic works without touching a model)
 
 **Input:**

@@ -9,16 +9,15 @@
 
 import * as readline from "node:readline";
 import { spawn, execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import os from "node:os";
+import { loadCatalog, resolveModel, MODELS_DIR } from "./catalog.js";
 import { scanHardware, formatBytes } from "./scan.js";
-import { MODELS_DIR } from "./catalog.js";
 import { rankCandidates, activateCandidate } from "./activate.js";
 import { runExam } from "./probes.js";
 import { saveReport } from "./reports.js";
 import { activeBaseUrl, requestModelFor, readState } from "./serve.js";
 import { launchSpecFor, type AgentTarget } from "./connect.js";
+import { which, mergeOpencodeConfig, installVscodeExtension } from "./agentops.js";
 import { startApiServer, API_PORT } from "./api.js";
 
 const MODE_LABEL: Record<string, string> = {
@@ -40,73 +39,11 @@ function openBrowser(url: string) {
   }
 }
 
-function which(bin: string): boolean {
-  try {
-    execFileSync(process.platform === "win32" ? "where" : "which", [bin], { stdio: "ignore" });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function mergeOpencodeConfig(block: Record<string, unknown>) {
-  const dir = join(os.homedir(), ".config", "opencode");
-  const file = join(dir, "opencode.json");
-  mkdirSync(dir, { recursive: true });
-  let existing: Record<string, unknown> = {};
-  if (existsSync(file)) {
-    try {
-      existing = JSON.parse(readFileSync(file, "utf8"));
-    } catch {
-      /* corrupt/empty file — start fresh rather than crash the wizard */
-    }
-  }
-  const merged = {
-    ...existing,
-    provider: { ...(existing.provider as object | undefined), ...(block.provider as object) },
-  };
-  writeFileSync(file, JSON.stringify(merged, null, 2));
-  return file;
-}
-
-/** Runs the vsix build+package+install chain — the same steps a human would
- *  type by hand — so the wizard's "install VS Code extension" button/menu
- *  item is never out of sync with what TESTING.md documents. */
-async function installVscodeExtension(repoRoot: string, log: (line: string) => void): Promise<void> {
-  const dir = join(repoRoot, "vscode-extension");
-  if (!existsSync(dir)) throw new Error(`${dir} not found — is this a full agentdyno checkout?`);
-  const run = (cmd: string, args: string[]) => {
-    log(`$ ${cmd} ${args.join(" ")}`);
-    execFileSync(cmd, args, { cwd: dir, stdio: "pipe" });
-  };
-  run("npm", ["install"]);
-  run("npm", ["run", "build"]);
-  run("npx", ["--yes", "@vscode/vsce", "package", "--no-dependencies", "--allow-missing-repository"]);
-  const vsixName = "agentdyno-vscode-0.1.0.vsix";
-  const codeBin = which("code")
-    ? "code"
-    : process.platform === "darwin" &&
-        existsSync("/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code")
-      ? "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
-      : null;
-  if (!codeBin) {
-    throw new Error(
-      "packaged the extension but couldn't find VS Code's `code` CLI — install it from " +
-        "VS Code's Command Palette (\"Shell Command: Install 'code' command in PATH\"), then run: " +
-        `code --install-extension ${join(dir, vsixName)}`
-    );
-  }
-  run(codeBin, ["--install-extension", join(dir, vsixName), "--force"]);
-}
-
 async function launchAgent(target: AgentTarget, repoRoot: string): Promise<{ launched: boolean; note: string }> {
   const state = readState();
   if (!state) throw new Error("no server active — this should not happen right after activation");
-  const models = (await import("./catalog.js")).loadCatalog();
-  const model = models.find((m) => m.id === state.modelId) ?? {
-    // Ollama models aren't in the static catalog; resolve live.
-    ...(await (await import("./catalog.js")).resolveModel(models, state.modelId)),
-  };
+  const models = loadCatalog();
+  const model = models.find((m) => m.id === state.modelId) ?? (await resolveModel(models, state.modelId));
   const spec = launchSpecFor(target, model, state);
 
   if (target === "opencode" && spec.opencodeProviderConfig) {
@@ -254,7 +191,7 @@ export async function runSetupWizard(repoRoot: string) {
 
   const root = join(repoRoot, "site", "dashboard");
   startApiServer(root);
-  const url = `http://127.0.0.1:${API_PORT}/setup/`;
+  const url = `http://127.0.0.1:${API_PORT}/setup.html`;
   console.log(`\nopening the guided setup in your browser: ${url}`);
   console.log("(the dashboard server is now running in this terminal — leave it open, or Ctrl-C and run `dyno dashboard` later)");
   openBrowser(url);
