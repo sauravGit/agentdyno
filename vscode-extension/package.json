@@ -4,6 +4,7 @@
   "description": "Thin wrapper: opens the AgentDyno local dashboard (scan/fit/switch/doctor/connect) inside VS Code. Requires the AgentDyno CLI (github.com/sauravGit/agentdyno) checked out on disk — this extension does not bundle it.",
   "version": "0.1.0",
   "publisher": "agentdyno",
+  "icon": "icon.png",
   "license": "Apache-2.0",
   "engines": { "vscode": "^1.85.0" },
   "categories": ["Other"],

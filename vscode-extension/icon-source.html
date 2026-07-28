@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  html,body{margin:0;padding:0;width:512px;height:512px;background:#0B0E11}
+  svg{display:block}
+</style></head>
+<body>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" fill="#0B0E11"/>
+  <!-- 240-degree gauge arc, per BRAND.md motif -->
+  <circle cx="256" cy="256" r="176" fill="none" stroke="#232B35" stroke-width="26"/>
+  <path d="M 256 80 A 176 176 0 1 1 108.6 349.6"
+        fill="none" stroke="#3DDC97" stroke-width="26" stroke-linecap="round"/>
+  <!-- tick marks -->
+  <g stroke="#8A97A6" stroke-width="6">
+    <line x1="256" y1="96" x2="256" y2="118"/>
+    <line x1="123" y1="167" x2="141" y2="180"/>
+    <line x1="389" y1="167" x2="371" y2="180"/>
+    <line x1="90" y1="330" x2="112" y2="322"/>
+  </g>
+  <!-- needle, resting near 80% per brand spec, forms a "y"-descender echo -->
+  <g transform="rotate(112 256 256)">
+    <line x1="256" y1="256" x2="256" y2="122" stroke="#E8EDF2" stroke-width="14" stroke-linecap="round"/>
+    <line x1="256" y1="256" x2="256" y2="122" stroke="#3DDC97" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <circle cx="256" cy="256" r="22" fill="#E8EDF2"/>
+  <circle cx="256" cy="256" r="10" fill="#0B0E11"/>
+</svg>
+</body></html>

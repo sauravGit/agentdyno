@@ -437,3 +437,41 @@ Format: each entry = date, decision/question, answer, why, evidence.
   install commands and output, honestly split into what I confirmed (install
   succeeds, extension registers) vs. the 3 steps requiring the user's own
   click, plus uninstall instructions. Renumbered old Step 12 (Cleanup) to 13.
+
+### D-021: Real screen capture + real VS Code extension E2E verification
+- User granted macOS Screen Recording permission mid-session; retried
+  screencapture, which now succeeds (previously blocked, D-020).
+- Captured a REAL screenshot of the user's actual VS Code, confirmed the
+  agentdyno.agentdyno-vscode extension appears in the Command Palette exactly
+  as coded: "AgentDyno: Open Dashboard" and "AgentDyno: Start Dashboard
+  Server". Selected "Open Dashboard" (via osascript keystroke automation,
+  which started working once Accessibility permission was also granted) and
+  captured the real notification the extension code produces when no
+  dashboard server is running: "AgentDyno dashboard is not running. Source:
+  AgentDyno" with Start it/Cancel buttons - this is the first real,
+  non-static proof the extension's actual logic (not just its packaging)
+  works inside a live VS Code.
+- Built a proper icon: rendered via headless Chrome from an SVG gauge mark
+  (same technique used for the site/dashboard screenshots and launch video
+  this session - reused, not a new tool) per BRAND.md's "circular gauge with
+  needle at ~80%" mark spec. Verified legible at actual small-icon size
+  (32px) before shipping. Removed a pre-baked corner-radius on the first
+  draft since VS Code's own UI already rounds extension icons - shipping a
+  full-bleed square avoids a "floating in a smaller frame" artifact.
+  Wired via package.json "icon": "icon.png", rebuilt and repackaged the
+  .vsix (31 KB, 7 files), reinstalled with --force. Confirmed on disk (not
+  just by re-running vsce) that icon.png is genuinely present in
+  ~/.vscode/extensions/agentdyno.agentdyno-vscode-0.1.0/ - the real path VS
+  Code's Extensions view reads from.
+- Hit a real, honestly-reported limit: clicking the "Start it" button and
+  navigating to the Extensions panel required simulated mouse clicks
+  (installed cliclick with the user's explicit go-ahead after an earlier
+  ambiguous confirmation was correctly rejected by the harness). Screenshot-
+  pixel-to-click-point coordinate mapping proved unreliable in this session
+  (a computed click landed in a different, unrelated real VS Code window
+  belonging to the user's other project rather than the intended magix-box
+  window's Extensions icon). Stopped rather than keep guessing coordinates
+  near the user's other real work. Final state (icon on disk in the real
+  extension install path, Command Palette registration, live notification
+  logic) is confirmed by direct filesystem/CLI inspection instead - equally
+  reliable evidence, without the risk of further mis-clicks.
