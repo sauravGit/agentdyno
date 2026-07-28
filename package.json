@@ -1,7 +1,7 @@
 {
   "name": "agentdyno",
-  "version": "0.3.1",
-  "description": "The dyno bench for local coding agents: scan your machine, fit the right open model, and PROVE it can drive tools before you wire up Claude Code, OpenCode, or Aider. Includes a model switcher, local dashboard/API, a VS Code extension shell, and an Ollama backend for privacy-first setups.",
+  "version": "0.4.0",
+  "description": "The dyno bench for local coding agents: scan your machine, fit the right open model, and PROVE it can drive tools before you wire up Claude Code, OpenCode, or Aider. Includes a guided setup wizard (CLI or browser UI), model switcher, local dashboard/API, VS Code extension, and an Ollama backend.",
   "type": "module",
   "license": "Apache-2.0",
   "engines": {
