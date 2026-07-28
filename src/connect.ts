@@ -97,3 +97,61 @@ export function connectOpencode(model: CatalogModel): string {
 export function connectAider(model: CatalogModel): string {
   return connectAiderWith(model, requireRunning());
 }
+
+// --- Machine-readable launch descriptors -----------------------------------
+// The human-readable strings above are for reading/copying. These are for the
+// setup wizard, which needs to actually SPAWN the agent rather than print
+// instructions about it — so env vars and args are returned as data, not
+// embedded in comment-annotated shell text.
+
+export type AgentTarget = "claude" | "opencode" | "aider";
+
+export interface LaunchSpec {
+  bin: string;
+  args: string[];
+  env: Record<string, string>;
+  /** For opencode: the provider config block that must be merged into
+   *  ~/.config/opencode/opencode.json before launching (null for the others). */
+  opencodeProviderConfig: Record<string, unknown> | null;
+}
+
+export function launchSpecFor(target: AgentTarget, model: CatalogModel, s: ServeState): LaunchSpec {
+  const baseUrl = activeBaseUrl(s);
+  const requestModel = publicModelId(model, s);
+  if (target === "claude") {
+    return {
+      bin: "claude",
+      args: [],
+      env: {
+        ANTHROPIC_BASE_URL: baseUrl,
+        ANTHROPIC_AUTH_TOKEN: "magix-box-local",
+        ANTHROPIC_MODEL: requestModel,
+        ANTHROPIC_SMALL_FAST_MODEL: requestModel,
+      },
+      opencodeProviderConfig: null,
+    };
+  }
+  if (target === "aider") {
+    return {
+      bin: "aider",
+      args: ["--model", `openai/${requestModel}`, "--map-tokens", "1024"],
+      env: { OPENAI_API_BASE: `${baseUrl}/v1`, OPENAI_API_KEY: "magix-box-local" },
+      opencodeProviderConfig: null,
+    };
+  }
+  return {
+    bin: "opencode",
+    args: ["-m", `magix-box/${requestModel}`],
+    env: {},
+    opencodeProviderConfig: {
+      provider: {
+        "magix-box": {
+          npm: "@ai-sdk/openai-compatible",
+          name: "magix-box (local)",
+          options: { baseURL: `${baseUrl}/v1` },
+          models: { [requestModel]: { name: model.displayName, limit: { context: s.context, output: 8192 } } },
+        },
+      },
+    },
+  };
+}

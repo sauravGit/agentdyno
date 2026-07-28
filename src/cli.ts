@@ -15,6 +15,8 @@ import { OLLAMA_BASE_URL } from "./ollama.js";
 import { rankForSwitch } from "./switch.js";
 import { REPORTS_DIR, loadAllReports, loadReport, saveReport } from "./reports.js";
 import { startApiServer, API_PORT } from "./api.js";
+import { activateCandidate } from "./activate.js";
+import { runSetupWizard } from "./setup.js";
 
 function arg(flag: string): string | null {
   const i = process.argv.indexOf(flag);
@@ -145,6 +147,11 @@ async function cmdStatus() {
   console.log(`doctor: ${report ? `grade ${report.grade} (${report.when})` : "not yet examined"}`);
 }
 
+async function cmdSetup() {
+  const repoRoot = new URL("../..", import.meta.url).pathname;
+  await runSetupWizard(repoRoot);
+}
+
 async function cmdDashboard() {
   const root = new URL("../../site/dashboard", import.meta.url).pathname;
   if (!existsSync(root)) throw new Error(`dashboard assets missing at ${root}`);
@@ -190,11 +197,8 @@ async function cmdSwitch() {
   if (!pick) throw new Error("no ranked candidate found");
   if (!pick.activatable) throw new Error(`${pick.fit.model.id} does not fit this machine`);
   console.log(`activating ${pick.fit.model.displayName} ${pick.fit.quant.quant} (${pick.verified ? "verified " + pick.gradeLabel : "unverified, prior " + pick.gradeLabel})...`);
-  await pullRuntime();
-  await pullModel(pick.fit.model, pick.fit.quant);
-  stopServer();
-  const s = await startServer(pick.fit, hw);
-  console.log(`ready: http://127.0.0.1:${s.port} (context ${s.context})`);
+  const { state } = await activateCandidate(pick, hw, (step) => console.log(`  ${step}...`));
+  console.log(`ready: ${state.backend === "ollama" ? "http://127.0.0.1:11434" : `http://127.0.0.1:${state.port}`} (context ${state.context})`);
   if (!pick.verified) console.log("NOTE: unverified on this machine — run mb doctor before connecting an agent.");
 }
 
@@ -202,6 +206,7 @@ const HELP = `magix-box — prove your machine can run a coding agent, then wire
 
 usage: mb <command>
 
+  setup                    guided setup: scan -> fit -> pull -> serve -> doctor -> connect, in one flow
   scan                     honest hardware report (--json)
   fit [--context N]        which models fit THIS machine, ranked (--json)
   switch                   ranked model switcher: verified grade beats unverified prior
@@ -222,6 +227,7 @@ async function main() {
   ensureDirs();
   const cmd = process.argv[2];
   const table: Record<string, () => Promise<void>> = {
+    setup: cmdSetup,
     scan: cmdScan,
     fit: cmdFit,
     pull: cmdPull,

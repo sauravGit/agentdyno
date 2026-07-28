@@ -11,6 +11,16 @@
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        { "id": "agentdyno", "title": "AgentDyno", "icon": "activitybar-icon.svg" }
+      ]
+    },
+    "views": {
+      "agentdyno": [
+        { "type": "webview", "id": "agentdyno.dashboardView", "name": "Dashboard" }
+      ]
+    },
     "commands": [
       { "command": "agentdyno.openDashboard", "title": "AgentDyno: Open Dashboard" },
       { "command": "agentdyno.startServer", "title": "AgentDyno: Start Dashboard Server" }

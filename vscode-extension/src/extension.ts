@@ -58,6 +58,65 @@ async function startServer(): Promise<void> {
   terminal.sendText("node dist/src/cli.js dashboard", true);
 }
 
+function dashboardHtml(url: string, showStartButton: boolean): string {
+  const csp = `default-src 'none'; frame-src ${url}; style-src 'unsafe-inline'; script-src 'unsafe-inline';`;
+  const startButton = showStartButton
+    ? `<button id="start">Start dashboard</button><p class="hint">Runs <code>dyno dashboard</code> in a terminal, then reloads this panel.</p>`
+    : "";
+  return `<!DOCTYPE html>
+<html><head><meta http-equiv="Content-Security-Policy" content="${csp}">
+<style>
+  html,body{margin:0;padding:0;width:100%;height:100%;background:#0B0E11;color:#E8EDF2;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  iframe{width:100%;height:100%;border:0;display:${showStartButton ? "none" : "block"}}
+  .empty{display:${showStartButton ? "flex" : "none"};flex-direction:column;align-items:center;
+    justify-content:center;height:100%;gap:12px;padding:20px;text-align:center}
+  button{font-family:inherit;background:#3DDC97;color:#07130d;border:none;border-radius:6px;
+    padding:8px 16px;font-weight:600;cursor:pointer}
+  .hint{color:#8A97A6;font-size:12px;max-width:220px}
+</style></head><body>
+<div class="empty"><div>AgentDyno dashboard is not running.</div>${startButton}</div>
+<iframe src="${url}"></iframe>
+<script>
+  const btn = document.getElementById('start');
+  if (btn) btn.addEventListener('click', () => acquireVsCodeApi().postMessage({ type: 'start' }));
+</script>
+</body></html>`;
+}
+
+class DashboardViewProvider implements vscode.WebviewViewProvider {
+  private view: vscode.WebviewView | undefined;
+
+  resolveWebviewView(webviewView: vscode.WebviewView): void {
+    this.view = webviewView;
+    webviewView.webview.options = { enableScripts: true };
+    webviewView.webview.onDidReceiveMessage(async (msg) => {
+      if (msg?.type === "start") {
+        await startServer();
+        await this.refresh();
+      }
+    });
+    void this.refresh();
+  }
+
+  async refresh(): Promise<void> {
+    if (!this.view) return;
+    const url = config().get<string>("dashboardUrl") ?? "http://127.0.0.1:8403";
+    const up = await pingDashboard(url);
+    this.view.webview.html = dashboardHtml(url, !up);
+    if (!up) {
+      // Poll a few times in case a server was just started elsewhere.
+      for (let i = 0; i < 10; i++) {
+        await new Promise((r) => setTimeout(r, 1000));
+        if (await pingDashboard(url)) {
+          this.view.webview.html = dashboardHtml(url, false);
+          break;
+        }
+      }
+    }
+  }
+}
+
 function openWebview(url: string) {
   const panel = vscode.window.createWebviewPanel(
     "agentdynoDashboard",
@@ -73,8 +132,13 @@ function openWebview(url: string) {
 }
 
 export function activate(context: vscode.ExtensionContext) {
+  const provider = new DashboardViewProvider();
   context.subscriptions.push(
-    vscode.commands.registerCommand("agentdyno.startServer", startServer),
+    vscode.window.registerWebviewViewProvider("agentdyno.dashboardView", provider),
+    vscode.commands.registerCommand("agentdyno.startServer", async () => {
+      await startServer();
+      await provider.refresh();
+    }),
     vscode.commands.registerCommand("agentdyno.openDashboard", async () => {
       const url = config().get<string>("dashboardUrl") ?? "http://127.0.0.1:8403";
       if (await pingDashboard(url)) {

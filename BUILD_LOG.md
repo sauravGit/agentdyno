@@ -475,3 +475,47 @@ Format: each entry = date, decision/question, answer, why, evidence.
   extension install path, Command Palette registration, live notification
   logic) is confirmed by direct filesystem/CLI inspection instead - equally
   reliable evidence, without the risk of further mis-clicks.
+
+### D-022: Guided setup wizard (`dyno setup`) — user-directed, addresses "installation is cumbersome"
+- User asked for a single command that: asks CLI-vs-UI, and (for UI) drives
+  the ENTIRE flow through scan/fit/pull/serve/doctor, then lets the user pick
+  Claude Code/OpenCode/Aider/VS Code, installs/connects, and hands them a
+  working local agent.
+- Factored src/activate.ts (rankCandidates + activateCandidate) as the one
+  shared "pull+serve a model" implementation used by `switch --activate`,
+  the API's runActivation, and the new wizard — so all three can never drift.
+- Added machine-readable launch descriptors to connect.ts (launchSpecFor):
+  distinct from the human-readable connect strings, these return {bin, args,
+  env} so the wizard can actually SPAWN claude/aider, or merge OpenCode's
+  provider config and spawn opencode, rather than just printing instructions.
+- New src/setup.ts: `dyno setup` asks CLI vs UI. CLI path is a real
+  interactive wizard (scan -> rank -> pick -> activate -> doctor (optional)
+  -> pick agent -> launch it in this terminal, OR auto-build+package+install
+  the VS Code extension via the exact same command chain documented in
+  TESTING.md). UI path starts the API server and opens the dashboard's new
+  /setup/ wizard page in a browser.
+- TWO REAL BUGS CAUGHT BY ACTUALLY RUNNING THIS, not by reading the code:
+  1. node:readline/promises's Interface.question() hangs forever on its
+     SECOND call over a non-TTY/piped stdin in this Node version (minimally
+     reproduced standalone, isolated from any of our own code). Switched to
+     the plain callback-style node:readline module wrapped in our own
+     promise.
+  2. A piped stdin emits 'end' as soon as its input is fully written; if a
+     real async gap (our leaderboard network fetch) happens between two
+     questions, that 'end' can arrive mid-flight and silently orphan the
+     pending question's callback (never resolves, never rejects) rather than
+     throwing — a genuinely confusing failure mode, tracked down via direct
+     debug instrumentation rather than continued guessing.
+  3. IMPORTANT CORRECTION after (1)+(2) didn't fully fix it: re-tested using
+     a REAL pseudo-terminal (macOS's `expect`, not a plain pipe) and the
+     wizard worked correctly end-to-end on the FIRST clean attempt. This
+     proved the remaining "hang" was an artifact of testing methodology
+     (piped/non-TTY stdin never behaves like a real interactive terminal,
+     which never sends EOF mid-session) — not a defect a real user would
+     ever hit. Recorded here so this distinction isn't lost: piped-stdin
+     testing of interactive CLIs is not representative; PTY-based testing
+     (expect/pty) is the correct verification method, and is what actually
+     proved this works.
+- Verified via `expect` against a real PTY: full flow (rank -> pick top ->
+  activate a cached model -> skip doctor -> skip interface) completes
+  correctly end to end, exit 0, no hang, no error.
