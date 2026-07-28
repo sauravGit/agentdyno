@@ -570,3 +570,23 @@ Format: each entry = date, decision/question, answer, why, evidence.
 - Updated TESTING.md (new "fast path: dyno setup" section, explaining the
   piped-stdin-vs-real-terminal distinction from D-022 so a future tester
   doesn't waste time chasing the same false alarm) and README.md.
+
+### D-024: Follow-up fixes closed out
+- SessionStart hook error diagnosis (from user report): root-caused to the
+  `claude-obsidian` plugin (added earlier this session via its own
+  marketplace) registering a SessionStart hook as "type": "prompt" in its
+  hooks.json — Claude Code does not support prompt-type hooks at session
+  start (no conversation exists yet to run a prompt against). Confirmed by
+  grepping every installed plugin's hooks.json for this exact pattern; found
+  in exactly one place. NOT an AgentDyno bug — fires on every `claude`
+  launch regardless of backend. No code changes made (not AgentDyno's file
+  to edit); the actionable fix is disabling/updating that specific plugin.
+- VS Code activity-bar icon: the earlier D-023 code changes (activitybar-
+  icon.svg, viewsContainers/views contributions, WebviewViewProvider) were
+  built and packaged but the actual --install-extension --force call had
+  been blocked by a transient classifier error mid-session and never
+  retried. Retried and confirmed on disk: ~/.vscode/extensions/agentdyno.
+  agentdyno-vscode-0.1.0/ now contains activitybar-icon.svg and its
+  package.json's contributes.viewsContainers/views match the built extension
+  exactly. VS Code needs a window reload to pick up new view containers
+  (standard behavior, not specific to this extension).
