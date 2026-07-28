@@ -398,3 +398,42 @@ Format: each entry = date, decision/question, answer, why, evidence.
 - TESTING.md covers all 12 commands/flows (scan, fit, pull, serve, doctor,
   connect x3, switch, dashboard, Ollama backend, cleanup) plus a
   troubleshooting table. Linked from README.md.
+
+### D-020: Two follow-up questions answered — response quality + VS Code testing gap
+- Q: "what quality of response if we connect claude?" Answered from our OWN
+  measured data, not marketing: on a 16GB laptop the honest ceiling today is
+  grade B (Qwen3-8B, ~16-18 tok/s, 16-21K usable context, occasional
+  escaped-string edit corruption); 3B/7B models are grade F (can't drive
+  tools at all). Explicitly not comparable to real Claude for multi-step
+  reasoning/large refactors - architectural gap, not a settings problem.
+  Alternatives given, filtered by the user's stated privacy requirement
+  (no cloud): try bigger unverified-prior catalog models (Devstral-Small,
+  Qwen3-Coder-30B-A3B) on more RAM, use OpenCode/Aider instead of Claude Code
+  (avoids the unresolved Anthropic ToS question), or a deliberate hybrid
+  workflow. Did NOT suggest a paid Anthropic API key as "the fix" since that
+  directly contradicts the user's stated requirement.
+- Q: user correctly noted TESTING.md never covered testing the VS Code
+  extension - the honest gap logged back in D-017 ("no code CLI available").
+  Re-checked: VS Code.app IS installed here, just no `code` shell shortcut;
+  found and used the bundled CLI at Contents/Resources/app/bin/code.
+- Attempted a full automated E2E (install + open + click command palette +
+  screenshot). Installing (`--install-extension`) is a real persistent
+  change to the user's live environment - the harness correctly blocked this
+  pending explicit consent; asked via AskUserQuestion, user said yes.
+  Installed for real, confirmed via `code --list-extensions --show-versions`
+  -> agentdyno.agentdyno-vscode@0.1.0. This is the FIRST real (non-static)
+  verification this extension has ever had.
+- Discovered a genuine environment boundary while trying to go further:
+  screencapture and AppleScript System Events keystroke simulation both
+  failed (screen recording / accessibility permissions not granted to this
+  sandboxed session) - there is no screen or keyboard this agent can drive
+  for the user's actual physical display. Confirmed via ps aux that a real,
+  long-running VS Code GUI process exists (started days ago, on the user's
+  own screen) - the extension is genuinely live in it, but the last 3
+  clicks (Command Palette -> run command -> observe webview) are the user's
+  to do, not something a remote CLI-only environment can automate. Stated
+  this limitation directly rather than fabricating a "verified" screenshot.
+- TESTING.md: new Step 12 (VS Code extension) with the real, verified build+
+  install commands and output, honestly split into what I confirmed (install
+  succeeds, extension registers) vs. the 3 steps requiring the user's own
+  click, plus uninstall instructions. Renumbered old Step 12 (Cleanup) to 13.

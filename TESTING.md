@@ -5,9 +5,9 @@ real run on a MacBook Air (Apple M4, 16 GB) so you know what "working" looks
 like before you try it yourself. Numbers (tok/s, GiB, grades) will differ on
 your machine — that's the point of the tool. Commands and shape shouldn't.
 
-Total time: ~15 minutes if you follow the "fast path" (small model). Add
-~10-15 minutes if you also want to see the honest F-vs-B contrast from the
-launch demo (Step 9, optional).
+Total time: ~15 minutes for the CLI fast path (small model). Add ~10-15
+minutes for the optional F-vs-B demo in Step 7, and ~5 minutes for the
+optional VS Code extension in Step 12.
 
 ---
 
@@ -391,7 +391,61 @@ AgentDyno only forgets its own bookkeeping; it never owns your Ollama process.
 
 ---
 
-## 12. Cleanup
+## 12. VS Code extension (thin wrapper around the dashboard)
+
+Build and install a real `.vsix` — no CLI-only shortcuts here, this installs
+into your actual VS Code.
+
+**Input:**
+```sh
+cd vscode-extension
+npm install
+npm run build
+npx --yes @vscode/vsce package --no-dependencies --allow-missing-repository
+code --install-extension agentdyno-vscode-0.1.0.vsix
+```
+(If `code` isn't on your PATH: open the Command Palette in VS Code ->
+"Shell Command: Install 'code' command in PATH" once, or use the full path
+to the bundled CLI, e.g. on macOS:
+`/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code`.)
+
+**Expected output:**
+```
+Installing extensions...
+Extension 'agentdyno-vscode-0.1.0.vsix' was successfully installed.
+```
+
+**Verify it's really installed:**
+```sh
+code --list-extensions --show-versions | grep agentdyno
+```
+**Expected output:**
+```
+agentdyno.agentdyno-vscode@0.1.0
+```
+
+**The last 3 steps need YOUR click** — no CLI can drive VS Code's UI, and
+if you're testing this from a remote/headless dev environment (like an
+agent-driven session) there is no screen for anything to automate:
+
+1. Open VS Code on this repo, open the Command Palette (`Cmd+Shift+P` /
+   `Ctrl+Shift+P`), type **AgentDyno: Open Dashboard**, press Enter.
+   **Expected:** if `dyno dashboard` isn't already running, VS Code asks
+   "AgentDyno dashboard is not running. Start it?" — click **Start it**.
+2. **Expected:** an integrated terminal opens and runs `node dist/src/cli.js
+   dashboard`; after a moment a new editor panel opens beside it showing the
+   AgentDyno dashboard (same UI as Step 10) inside a webview.
+3. Try the **AgentDyno: Start Dashboard Server** command directly too — it
+   should just (re)start the terminal command without opening the webview.
+
+**Uninstall when done** (optional):
+```sh
+code --uninstall-extension agentdyno.agentdyno-vscode
+```
+
+---
+
+## 13. Cleanup
 
 **Input:**
 ```sh
@@ -416,6 +470,7 @@ rm -rf ~/.magix-box
 | every model grades F | server started but never loaded (check `~/.magix-box/logs/llama-server.log`) | confirm `status` shows the model you expect |
 | `dashboard` shows a blank switcher table | still loading (first paint) | wait ~1s, it polls automatically |
 | Ollama section: "not pulled into ollama yet" | forgot `ollama pull <tag>` first | AgentDyno never pulls into Ollama's own store for you |
+| `code: command not found` | VS Code's shell shortcut isn't installed | use the full path to the bundled CLI (see Step 12), or run "Shell Command: Install 'code' command in PATH" from VS Code's own Command Palette once |
 
 If something here doesn't match, that's a bug — please open an issue with the
 exact command and output you got.
