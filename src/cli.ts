@@ -3,9 +3,10 @@
 
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import os from "node:os";
 import { MODELS_DIR, ensureDirs, findModel, loadCatalog, resolveModel } from "./catalog.js";
 import { DEFAULT_CONTEXT, rankFits } from "./fit.js";
-import { connectClaude, connectGoose, connectCline } from "./connect.js";
+import { connectClaude, connectGoose, connectCline, connectClaudeRemote, connectGooseRemote, connectClineRemote, fetchRemoteStatus } from "./connect.js";
 import { GRADE_MEANING, runExam } from "./probes.js";
 import { fetchLeaderboard } from "./leaderboard.js";
 import { pullModel, pullRuntime } from "./pull.js";
@@ -17,6 +18,7 @@ import { REPORTS_DIR, loadAllReports, loadReport, saveReport } from "./reports.j
 import { startApiServer, API_PORT } from "./api.js";
 import { activateCandidate } from "./activate.js";
 import { runSetupWizard } from "./setup.js";
+import { getOrCreateLanToken, advertiseLan, discoverLan, saveRemoteConfig, loadRemoteConfig, clearRemoteConfig } from "./lan.js";
 
 function arg(flag: string): string | null {
   const i = process.argv.indexOf(flag);
@@ -120,8 +122,20 @@ async function cmdDoctor() {
 
 async function cmdConnect() {
   const target = process.argv[3];
+  if (!["claude", "goose", "cline"].includes(target)) throw new Error("usage: mb connect <claude|goose|cline>");
+
+  const remote = loadRemoteConfig();
+  if (remote) {
+    console.log(`using remote server: ${remote.baseUrl} (run \`dyno remote clear\` to use a local server instead)\n`);
+    const status = await fetchRemoteStatus(remote.baseUrl, remote.token);
+    if (target === "claude") console.log(connectClaudeRemote(status, remote.baseUrl, remote.token));
+    else if (target === "goose") console.log(connectGooseRemote(status, remote.baseUrl, remote.token));
+    else console.log(connectClineRemote(status, remote.baseUrl, remote.token));
+    return;
+  }
+
   const s = readState();
-  if (!s) throw new Error("no server running; run mb serve first");
+  if (!s) throw new Error("no server running; run mb serve first (or `dyno remote connect` to use another machine's server)");
   const m = await resolveModel(loadCatalog(), s.modelId);
   const report = loadReport(s.modelId);
   if (!report) {
@@ -135,7 +149,6 @@ async function cmdConnect() {
   if (target === "claude") console.log(connectClaude(m));
   else if (target === "goose") console.log(connectGoose(m));
   else if (target === "cline") console.log(connectCline(m));
-  else throw new Error("usage: mb connect <claude|goose|cline>");
 }
 
 async function cmdStatus() {
@@ -155,10 +168,60 @@ async function cmdSetup() {
 async function cmdDashboard() {
   const root = new URL("../../site/dashboard", import.meta.url).pathname;
   if (!existsSync(root)) throw new Error(`dashboard assets missing at ${root}`);
-  startApiServer(root);
-  console.log(`dashboard: http://127.0.0.1:${API_PORT}`);
-  console.log("loopback only — not reachable from outside this machine. Ctrl-C to stop.");
+  const lan = has("--lan");
+  const token = lan ? getOrCreateLanToken() : undefined;
+  startApiServer(root, API_PORT, { lan, token });
+  if (!lan) {
+    console.log(`dashboard: http://127.0.0.1:${API_PORT}`);
+    console.log("loopback only — not reachable from outside this machine. Ctrl-C to stop.");
+  } else {
+    const hostname = os.hostname();
+    console.log(`dashboard: http://127.0.0.1:${API_PORT} (also reachable on your LAN at this machine's IP, port ${API_PORT})`);
+    console.log(`advertising as "${hostname}" on your network — find it from another machine with: dyno remote discover`);
+    console.log(`pairing token (share this only with devices you trust): ${token}`);
+    console.log("Ctrl-C to stop.");
+    const stopAdvertising = await advertiseLan(API_PORT);
+    process.on("SIGINT", () => {
+      stopAdvertising();
+      process.exit(0);
+    });
+  }
   await new Promise(() => {}); // keep the process alive
+}
+
+async function cmdRemote() {
+  const sub = process.argv[3];
+  if (sub === "discover") {
+    console.log("browsing the LAN for AgentDyno servers (3s)...");
+    const found = await discoverLan(3000);
+    if (found.length === 0) {
+      console.log("none found. Make sure the other machine ran `dyno dashboard --lan` and is on the same network.");
+      return;
+    }
+    found.forEach((s, i) => console.log(`  [${i + 1}] ${s.host}  ${s.addresses[0]}:${s.port}`));
+    console.log('\nconnect with: dyno remote connect <host>:<port> <token>   (token is shown on the host machine)');
+    return;
+  }
+  if (sub === "connect") {
+    const target = process.argv[4];
+    const token = process.argv[5];
+    if (!target || !token) throw new Error("usage: dyno remote connect <host:port> <token>");
+    saveRemoteConfig({ baseUrl: `http://${target}`, token });
+    console.log(`saved. This machine's connect configs will now point at ${target}.`);
+    console.log("run `dyno remote clear` to go back to using a local server.");
+    return;
+  }
+  if (sub === "clear") {
+    clearRemoteConfig();
+    console.log("cleared — back to local mode.");
+    return;
+  }
+  if (sub === "status") {
+    const cfg = loadRemoteConfig();
+    console.log(cfg ? `remote: ${cfg.baseUrl}` : "remote: not configured (using local server)");
+    return;
+  }
+  throw new Error("usage: dyno remote <discover|connect|clear|status>");
 }
 
 async function cmdSwitch() {
@@ -220,6 +283,10 @@ usage: mb <command>
   connect <claude|goose|cline>              wire an agent to the VERIFIED local server
   status                   server + verification status
   dashboard                local web UI + API (loopback only, http://127.0.0.1:8403)
+  dashboard --lan          same, but reachable + discoverable on your LAN (pairing token required)
+  remote discover          find AgentDyno servers advertised on your LAN
+  remote connect <h:p> <t> point this machine's connect configs at a remote AgentDyno server
+  remote status | clear    show or clear the current remote target
 
 Local, free, no accounts, no telemetry. Apache-2.0.`;
 
@@ -237,6 +304,7 @@ async function main() {
     status: cmdStatus,
     switch: cmdSwitch,
     dashboard: cmdDashboard,
+    remote: cmdRemote,
   };
   if (!cmd || !table[cmd]) {
     console.log(HELP);

@@ -637,3 +637,64 @@ Format: each entry = date, decision/question, answer, why, evidence.
   install (CLI wizard option 4, or the .vsix directly) sets up everything.
 - 39/39 tests passing (5 new/updated in test/connect.test.js covering the
   corrected Goose behavior and Cline's documented gap).
+
+### D-026: LAN / remote mode — shipped, live-verified over a real network interface
+- User requirement: a machine on the same WiFi/LAN should be able to
+  discover and use another machine's already-running AgentDyno server from
+  its own VS Code/CLI — "local mode or remote mode."
+- SECURITY DESIGN DECISION (the load-bearing choice): the raw inference port
+  (llama-server 8402 / Ollama 11434) is NEVER bound to the LAN — llama-server
+  has no built-in authentication, so exposing it directly on a shared network
+  would hand any device on that WiFi unrestricted model access. Instead, only
+  the control-plane API server (8403) binds to 0.0.0.0 in LAN mode, gated by
+  a bearer token, and it PROXIES inference requests (new /v1/* route in
+  api.ts) to the local inference server. Exactly one port is ever reachable
+  from the network, and it's the authenticated one.
+- Verified bonjour-service (npm, v1.4.3, published 2026-07-09, 2 small deps,
+  no native bindings) before adding it as a dependency; confirmed its real
+  API shape (Bonjour.publish/find, Browser 'up' events) by direct inspection
+  of its .d.ts files and a live import test, rather than assuming a shape
+  from memory.
+- New src/lan.ts: getOrCreateLanToken (24 random bytes, hex, 0600 permissions,
+  persisted at ~/.magix-box/lan-token), advertiseLan/discoverLan (mDNS via
+  bonjour-service, presence-only — hostname/port, NEVER the token), remote
+  config save/load/clear (~/.magix-box/remote.json).
+- api.ts: createApiServer/startApiServer take {lan, token} options. In LAN
+  mode every /api/* and /v1/* route requires `Authorization: Bearer <token>`
+  except the public /api/lan/hello identity check; default/local mode is
+  completely unchanged (no auth, loopback-only, zero new friction).
+- cli.ts: `dyno dashboard --lan` (binds 0.0.0.0, prints the token, advertises),
+  `dyno remote discover|connect|status|clear`. `dyno connect <target>` now
+  checks for a saved remote config FIRST and, if present, fetches the
+  remote's live status through its authenticated API and builds a config
+  pointing at the remote's proxy with the real token — new connect.ts
+  functions connectClaudeRemote/connectGooseRemote/connectClineRemote +
+  fetchRemoteStatus, kept separate from the local connectXWith functions
+  rather than overloading them, so the well-tested local path is unchanged.
+- LIVE-VERIFIED END TO END over this machine's REAL LAN IP (192.168.10.29),
+  not loopback, not mocked:
+  1. `dyno dashboard --lan` → real 0.0.0.0 bind, real generated token, real
+     mDNS advertisement.
+  2. Unauthenticated request to the real LAN IP → 401. Authenticated (correct
+     bearer token) → full /api/status JSON, including a real saved doctor
+     report.
+  3. Unauthenticated proxy request to /v1/chat/completions → 401.
+     Authenticated → reached the real llama-server and got a genuine
+     completion back (verified with both OpenAI-style /v1/chat/completions
+     AND Anthropic-style /v1/messages with the exact headers Claude Code
+     sends — x-api-key, anthropic-version).
+  4. `dyno remote discover` (real CLI, real mDNS browse) found the
+     advertised service with the correct host/IP/port.
+  5. `dyno remote connect <ip:port> <token>` saved it; `dyno connect claude`
+     correctly detected the remote config, fetched the remote's live status
+     over the authenticated API, and printed a working config pointing
+     ANTHROPIC_BASE_URL at the remote's proxy with the real token (not the
+     local "magix-box-local" placeholder, which only ever meant anything to
+     the loopback server).
+  6. `dyno remote clear` correctly reverted to local mode.
+- New test/lan.test.js (3 tests) locks the token-persistence and
+  remote-config round-trip logic. The mDNS/network parts aren't
+  re-mocked in unit tests (they need a real socket) — covered by the live
+  verification above instead, consistent with this project's practice of
+  preferring a real end-to-end run over a mocked unit test where feasible.
+  42/42 tests passing overall.

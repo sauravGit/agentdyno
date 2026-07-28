@@ -6,6 +6,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
+import os from "node:os";
 import { MODELS_DIR, loadCatalog, resolveModel, ensureDirs } from "./catalog.js";
 import { DEFAULT_CONTEXT } from "./fit.js";
 import { scanHardware } from "./scan.js";
@@ -17,6 +18,7 @@ import { connectClaude, connectGoose, connectCline, launchSpecFor, type AgentTar
 import { loadAllReports, loadReport, saveReport } from "./reports.js";
 import { rankCandidates, activateCandidate } from "./activate.js";
 import { installVscodeExtension, launchInNewTerminal } from "./agentops.js";
+import { getOrCreateLanToken } from "./lan.js";
 
 export const API_PORT = 8403;
 
@@ -139,12 +141,43 @@ function serveStatic(root: string, urlPath: string, res: ServerResponse): boolea
   return true;
 }
 
-export function createApiServer(dashboardRoot: string) {
+export interface ApiServerOptions {
+  /** When true, binds are expected to be non-loopback — every /api/* route
+   *  except /api/lan/hello requires a matching bearer token. Local mode
+   *  (the default) needs none of this: same zero-friction UX as before. */
+  lan?: boolean;
+  token?: string;
+}
+
+function isAuthorized(req: IncomingMessage, token: string): boolean {
+  const header = req.headers.authorization ?? "";
+  const match = header.match(/^Bearer (.+)$/);
+  if (!match) return false;
+  // Constant-time-ish compare is overkill for a locally-generated 24-byte hex
+  // token over a LAN a user explicitly paired to, but cheap and correct.
+  return match[1] === token;
+}
+
+export function createApiServer(dashboardRoot: string, options: ApiServerOptions = {}) {
+  const lanToken = options.lan ? options.token ?? getOrCreateLanToken() : null;
+
   return createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     const path = url.pathname;
 
     try {
+      // LAN mode: gate every /api/* AND /v1/* (inference proxy) route except
+      // the public identity check. /v1/* must be gated too — it's the proxy
+      // to the raw, unauthenticated-by-itself inference server.
+      const needsAuth = (path.startsWith("/api/") && path !== "/api/lan/hello") || path.startsWith("/v1/");
+      if (lanToken && needsAuth && !isAuthorized(req, lanToken)) {
+        return json(res, 401, { error: "missing or incorrect pairing token" });
+      }
+
+      if (path === "/api/lan/hello") {
+        return json(res, 200, { hostname: os.hostname(), lanMode: !!lanToken });
+      }
+
       if (path === "/api/scan") {
         return json(res, 200, scanHardware(MODELS_DIR));
       }
@@ -246,6 +279,26 @@ export function createApiServer(dashboardRoot: string) {
         return json(res, 200, { baseUrl: BASE_URL });
       }
 
+      // Inference proxy: the ONLY way inference requests should reach this
+      // machine from the network in LAN mode. The raw llama-server/Ollama
+      // port is never bound to the LAN directly (see lan.ts's header
+      // comment for why) — this authenticated route stands in for it.
+      if (path.startsWith("/v1/")) {
+        const s = readState();
+        if (!s) return json(res, 409, { error: "no server running" });
+        const target = `${activeBaseUrl(s)}${path}${url.search}`;
+        const chunks: Buffer[] = [];
+        for await (const c of req) chunks.push(c as Buffer);
+        const upstream = await fetch(target, {
+          method: req.method,
+          headers: { "Content-Type": "application/json" },
+          body: chunks.length ? Buffer.concat(chunks) : undefined,
+        });
+        const body = Buffer.from(await upstream.arrayBuffer());
+        res.writeHead(upstream.status, { "Content-Type": upstream.headers.get("content-type") ?? "application/json" });
+        return res.end(body);
+      }
+
       if (serveStatic(dashboardRoot, path, res)) return;
 
       json(res, 404, { error: "not found" });
@@ -255,9 +308,11 @@ export function createApiServer(dashboardRoot: string) {
   });
 }
 
-export function startApiServer(dashboardRoot: string, port: number = API_PORT) {
+export function startApiServer(dashboardRoot: string, port: number = API_PORT, options: ApiServerOptions = {}) {
   ensureDirs();
-  const server = createApiServer(dashboardRoot);
-  server.listen(port, "127.0.0.1");
+  const server = createApiServer(dashboardRoot, options);
+  // LAN mode binds every interface (0.0.0.0) so other devices on the network
+  // can reach it; default/local mode stays loopback-only, unchanged.
+  server.listen(port, options.lan ? "0.0.0.0" : "127.0.0.1");
   return server;
 }

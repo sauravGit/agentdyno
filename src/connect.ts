@@ -200,3 +200,66 @@ export function launchSpecFor(target: AgentTarget, model: CatalogModel, s: Serve
       `panel in VS Code once -> Settings -> API Provider: OpenAI Compatible -> Base URL: ${baseUrl}/v1.`,
   };
 }
+
+// --- Remote connect (LAN mode) ----------------------------------------------
+// A second machine on the same network has no LOCAL server state to read —
+// it must fetch the host machine's live status over HTTP (through the
+// authenticated API server, see lan.ts/api.ts). This mirrors the local
+// connectXWith functions above but points at the remote's proxy endpoint and
+// uses the real pairing token as the auth key instead of the local "magix-box-local"
+// placeholder (which only ever meant something to our own loopback server).
+
+export interface RemoteStatus {
+  modelId: string;
+  context: number;
+  displayName: string;
+  paramsB: number;
+}
+
+/** Fetches the remote host's live server state through its authenticated API. */
+export async function fetchRemoteStatus(remoteBaseUrl: string, token: string): Promise<RemoteStatus> {
+  const res = await fetch(`${remoteBaseUrl}/api/status`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) throw new Error("pairing token rejected by the remote server");
+  if (!res.ok) throw new Error(`remote status check failed: ${res.status}`);
+  const data = (await res.json()) as { server: { modelId: string; context: number } | null };
+  if (!data.server) throw new Error("the remote server has no model active — ask them to run `dyno serve`");
+  // The remote's display name/paramsB aren't critical to a working config;
+  // fall back to the raw model id rather than fail the whole connect step
+  // if that richer metadata isn't reachable.
+  return { modelId: data.server.modelId, context: data.server.context, displayName: data.server.modelId, paramsB: NaN };
+}
+
+export function connectClaudeRemote(remote: RemoteStatus, remoteBaseUrl: string, token: string): string {
+  return `# Claude Code -> REMOTE ${remote.displayName} (on another machine, via AgentDyno LAN mode)
+export ANTHROPIC_BASE_URL="${remoteBaseUrl}"
+export ANTHROPIC_AUTH_TOKEN="${token}"
+export ANTHROPIC_MODEL="${remote.modelId}"
+export ANTHROPIC_SMALL_FAST_MODEL="${remote.modelId}"
+# then run: claude
+
+# This points at another machine's model over your LAN, through AgentDyno's
+# authenticated proxy — never at the raw inference port directly.
+# Guardrail: remote server context is ${remote.context} tokens.`;
+}
+
+export function connectGooseRemote(remote: RemoteStatus, remoteBaseUrl: string, token: string): string {
+  return `# Goose -> REMOTE ${remote.displayName} (on another machine, via AgentDyno LAN mode)
+export GOOSE_PROVIDER="openai"
+export GOOSE_MODEL="${remote.modelId}"
+export OPENAI_HOST="${remoteBaseUrl}"
+export OPENAI_BASE_PATH="v1/chat/completions"
+export OPENAI_API_KEY="${token}"
+goose run --model ${remote.modelId}
+# Guardrail: remote server context is ${remote.context} tokens.`;
+}
+
+export function connectClineRemote(remote: RemoteStatus, remoteBaseUrl: string, token: string): string {
+  return `# Cline -> REMOTE ${remote.displayName} (on another machine, via AgentDyno LAN mode)
+#   Settings (gear icon) -> API Provider: "OpenAI Compatible"
+#   Base URL: ${remoteBaseUrl}/v1
+#   API Key:  ${token}
+#   Model ID: ${remote.modelId}
+cline -P openai-compatible -m ${remote.modelId} -k ${token}`;
+}
