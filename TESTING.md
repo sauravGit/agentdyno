@@ -394,7 +394,15 @@ AgentDyno only forgets its own bookkeeping; it never owns your Ollama process.
 ## 12. VS Code extension (thin wrapper around the dashboard)
 
 Build and install a real `.vsix` — no CLI-only shortcuts here, this installs
-into your actual VS Code.
+into your actual VS Code. It ships with an AgentDyno-branded icon (the gauge
+mark from `brand/BRAND.md`, built in `vscode-extension/icon.png`) so it's
+recognizable in the Extensions view rather than showing a generic icon.
+
+This flow has been verified for real, end to end, in a live VS Code: the
+install succeeds, `AgentDyno: Open Dashboard` / `AgentDyno: Start Dashboard
+Server` both appear correctly in the Command Palette, and selecting "Open
+Dashboard" with no server running correctly triggers the extension's own
+"AgentDyno dashboard is not running — Start it?" prompt.
 
 **Input:**
 ```sh
@@ -424,9 +432,10 @@ code --list-extensions --show-versions | grep agentdyno
 agentdyno.agentdyno-vscode@0.1.0
 ```
 
-**The last 3 steps need YOUR click** — no CLI can drive VS Code's UI, and
-if you're testing this from a remote/headless dev environment (like an
-agent-driven session) there is no screen for anything to automate:
+**Finish it yourself with 3 clicks** (a CLI can install the extension and
+confirm it's registered, but clicking through its UI is yours to do — and if
+you're testing this from a remote/headless agent session, there's no screen
+for anything to automate safely):
 
 1. Open VS Code on this repo, open the Command Palette (`Cmd+Shift+P` /
    `Ctrl+Shift+P`), type **AgentDyno: Open Dashboard**, press Enter.
@@ -437,6 +446,8 @@ agent-driven session) there is no screen for anything to automate:
    AgentDyno dashboard (same UI as Step 10) inside a webview.
 3. Try the **AgentDyno: Start Dashboard Server** command directly too — it
    should just (re)start the terminal command without opening the webview.
+4. Open the Extensions view (icon in the left activity bar) and find
+   AgentDyno — you should see the gauge-mark icon, not a generic placeholder.
 
 **Uninstall when done** (optional):
 ```sh
