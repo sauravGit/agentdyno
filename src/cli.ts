@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // magix-box CLI — mb <command>
 
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import os from "node:os";
 import { MODELS_DIR, ensureDirs, findModel, loadCatalog, resolveModel } from "./catalog.js";
@@ -280,6 +280,7 @@ usage: mb <command>
   doctor                   the agentic readiness exam: 5 probes, grade A-F
   connect <goose|cline>                     wire an agent to the VERIFIED local server
   status                   server + verification status
+  version | --version | -v show the installed AgentDyno version
   dashboard                local web UI + API (loopback only, http://127.0.0.1:8403)
   dashboard --lan          same, but reachable + discoverable on your LAN (pairing token required)
   remote discover          find AgentDyno servers advertised on your LAN
@@ -288,9 +289,19 @@ usage: mb <command>
 
 Local, free, no accounts, no telemetry. Apache-2.0.`;
 
+async function cmdVersion() {
+  const pkgUrl = new URL("../../package.json", import.meta.url);
+  const pkg = JSON.parse(readFileSync(pkgUrl, "utf8"));
+  console.log(pkg.version);
+}
+
 async function main() {
   ensureDirs();
   const cmd = process.argv[2];
+  if (cmd === "--version" || cmd === "-v") {
+    await cmdVersion();
+    return;
+  }
   const table: Record<string, () => Promise<void>> = {
     setup: cmdSetup,
     scan: cmdScan,
@@ -303,6 +314,7 @@ async function main() {
     switch: cmdSwitch,
     dashboard: cmdDashboard,
     remote: cmdRemote,
+    version: cmdVersion,
   };
   if (!cmd || !table[cmd]) {
     console.log(HELP);

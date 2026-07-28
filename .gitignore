@@ -4,3 +4,4 @@ vscode-extension/out/
 research/upstream/
 *.log
 .DS_Store
+*.tgz
