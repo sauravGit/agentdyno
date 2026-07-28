@@ -7,7 +7,7 @@
 // still shows the real pulled tag (since Ollama actually routes on it).
 import { test } from "node:test";
 import assert from "node:assert";
-import { connectClaudeWith, connectOpencodeWith, connectAiderWith } from "../dist/src/connect.js";
+import { connectClaudeWith, connectGooseWith, connectClineWith, launchSpecFor } from "../dist/src/connect.js";
 
 const model = (over = {}) => ({
   id: "qwen2.5-coder-3b", family: "Qwen2.5-Coder", displayName: "Qwen2.5 Coder 3B Instruct",
@@ -24,12 +24,13 @@ test("llama-server backend: connect configs show the real catalog id, not the in
   assert.match(claude, /ANTHROPIC_MODEL="qwen2\.5-coder-3b"/);
   assert.doesNotMatch(claude, /ANTHROPIC_MODEL="local"/);
 
-  const opencode = connectOpencodeWith(model(), llamaState);
-  assert.match(opencode, /"qwen2\.5-coder-3b":/);
-  assert.match(opencode, /opencode -m magix-box\/qwen2\.5-coder-3b/);
+  const goose = connectGooseWith(model(), llamaState);
+  assert.match(goose, /GOOSE_MODEL="qwen2\.5-coder-3b"/);
+  assert.match(goose, /OPENAI_HOST="http:\/\/127\.0\.0\.1:8402"/);
 
-  const aider = connectAiderWith(model(), llamaState);
-  assert.match(aider, /--model openai\/qwen2\.5-coder-3b/);
+  const cline = connectClineWith(model(), llamaState);
+  assert.match(cline, /Model ID: qwen2\.5-coder-3b/);
+  assert.match(cline, /cline -P openai-compatible -m qwen2\.5-coder-3b/);
 });
 
 test("ollama backend: connect configs use the exact pulled tag (routing depends on it)", () => {
@@ -40,8 +41,33 @@ test("ollama backend: connect configs use the exact pulled tag (routing depends 
 });
 
 test("guardrail text and context are still present in every target", () => {
-  for (const fn of [connectClaudeWith, connectOpencodeWith, connectAiderWith]) {
+  for (const fn of [connectClaudeWith, connectGooseWith, connectClineWith]) {
     const out = fn(model(), llamaState);
     assert.match(out, /32768/); // server context surfaced somewhere
   }
+});
+
+test("goose launch spec has no standing manual-step warning (battle-tested: connectivity works on both backends)", () => {
+  const llamaSpec = launchSpecFor("goose", model(), llamaState);
+  assert.equal(llamaSpec.manualStepNote, null);
+  const ollamaSpec = launchSpecFor("goose", model({ id: "ollama:qwen2.5-coder:3b" }), ollamaState);
+  assert.equal(ollamaSpec.manualStepNote, null);
+});
+
+test("goose connect text cites the live battle test, not the stale unreproduced GitHub issue", () => {
+  const out = connectGooseWith(model(), llamaState);
+  assert.match(out, /battle-tested/);
+  assert.doesNotMatch(out, /3979/);
+});
+
+test("cline launch spec always flags the undocumented base-URL gap", () => {
+  const spec = launchSpecFor("cline", model(), llamaState);
+  assert.match(spec.manualStepNote, /base URL/);
+  assert.deepEqual(spec.args, ["-P", "openai-compatible", "-m", "qwen2.5-coder-3b", "-k", "magix-box-local"]);
+});
+
+test("claude launch spec has no manual step needed", () => {
+  const spec = launchSpecFor("claude", model(), llamaState);
+  assert.equal(spec.manualStepNote, null);
+  assert.equal(spec.bin, "claude");
 });

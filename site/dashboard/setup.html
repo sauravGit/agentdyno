@@ -111,17 +111,17 @@ a{color:var(--accent)}
         <div class="t">Claude Code</div>
         <div class="d">Anthropic's CLI, pointed at your local model</div>
       </button>
-      <button class="choice" data-choice="opencode">
-        <div class="t">OpenCode</div>
-        <div class="d">Fully open-source agent CLI</div>
+      <button class="choice" data-choice="goose">
+        <div class="t">Goose</div>
+        <div class="d">Block's open-source, MCP-native agent CLI</div>
       </button>
-      <button class="choice" data-choice="aider">
-        <div class="t">Aider</div>
-        <div class="d">Fully open-source pair-programming CLI</div>
+      <button class="choice" data-choice="cline">
+        <div class="t">Cline</div>
+        <div class="d">Open-source agent, CLI + VS Code extension</div>
       </button>
       <button class="choice" data-choice="vscode">
         <div class="t">VS Code extension</div>
-        <div class="d">Installs the AgentDyno panel in VS Code</div>
+        <div class="d">Installs the AgentDyno panel, Goose + Cline CLIs, and Cline's extension</div>
       </button>
     </div>
     <button id="skipAgentBtn" class="ghost">Skip — I'll connect manually</button>
@@ -275,19 +275,20 @@ async function finishFlow(choice) {
   if (choice === "skip") {
     const r = await api(`/api/connect/claude`).catch(() => null); // any target works to confirm server state
     $("#finishTitle").textContent = "// server is ready";
-    $("#finishBody").innerHTML = `<p>Run <code>dyno connect claude|opencode|aider</code> any time to get the config.</p>`;
+    $("#finishBody").innerHTML = `<p>Run <code>dyno connect claude|goose|cline</code> any time to get the config.</p>`;
     return;
   }
   $("#finishTitle").textContent = `// launching ${choice}`;
   $("#finishBody").innerHTML = `<div class="progress"><span class="spinner"></span>opening a terminal...</div>`;
   const result = await api("/api/setup/launch-agent", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target: choice }) });
+  const noteHtml = result.manualStepNote ? `<p class="muted" style="margin-top:14px">${result.manualStepNote}</p>` : "";
   if (result.launched) {
     $("#finishTitle").textContent = "// done";
     $("#finishBody").innerHTML = `<div class="done-banner"><div class="big-check">&#10003;</div>
-      <p>${choice} is launching in a new terminal window, connected to your local model.</p></div>`;
+      <p>${choice} is launching in a new terminal window, connected to your local model.</p></div>${noteHtml}`;
   } else {
     $("#finishTitle").textContent = "// one manual step left";
-    $("#finishBody").innerHTML = `<p>${result.note ? "" : ""}</p><pre class="out">${result.note}</pre>`;
+    $("#finishBody").innerHTML = `<pre class="out">${result.note}</pre>${noteHtml}`;
   }
 }
 

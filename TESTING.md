@@ -85,9 +85,10 @@ pick a number [1/2]:
 **Choosing `1` (UI)**: starts the dashboard server and opens
 `http://127.0.0.1:8403/setup.html` in your browser — a step-by-step wizard:
 machine → pick a model → activate (live progress) → run the exam (optional)
-→ pick Claude Code / OpenCode / Aider / VS Code extension → done. Picking an
+→ pick Claude Code / Goose / Cline / VS Code extension → done. Picking an
 agent opens a new terminal window with it already connected (macOS); picking
-the VS Code extension builds, packages, and installs it automatically.
+the VS Code extension builds, packages, and installs it automatically —
+along with the Goose + Cline CLIs and Cline's own VS Code extension.
 
 **Choosing `2` (CLI)**: the same flow as plain text prompts in this terminal,
 ending with an option to launch the chosen agent directly, in this same
@@ -323,7 +324,7 @@ export ANTHROPIC_SMALL_FAST_MODEL="qwen2.5-coder-3b"
 #    past ~5 tools).
 # NOTE: Anthropic has not publicly stated whether pointing Claude Code at
 # non-Anthropic backends is permitted (github.com/anthropics/claude-code/issues/5577).
-# Fully-open alternatives with first-class support here: mb connect opencode | aider
+# Fully-open alternatives with first-class support here: mb connect goose | cline
 ```
 
 **What to check:** notice the WARNING — it only appears because the grade is
@@ -332,8 +333,8 @@ part) and the warning should disappear.
 
 **Also try:**
 ```sh
-node dist/src/cli.js connect opencode
-node dist/src/cli.js connect aider
+node dist/src/cli.js connect goose
+node dist/src/cli.js connect cline
 ```
 Each prints a different, correct config for that specific tool.
 
@@ -390,7 +391,7 @@ loopback only — not reachable from outside this machine. Ctrl-C to stop.
 - A **// switcher** table matching your `switch` output, with an
   **activate** / **pull + activate** button per row
 - A **// active server** panel with a **run doctor exam** button
-- A **// connect** panel with tabs for claude / opencode / aider that show
+- A **// connect** panel with tabs for claude / goose / cline that show
   real config text (only after a server is running)
 
 Click **activate** on any row and watch the page poll and update itself over

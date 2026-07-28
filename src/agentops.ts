@@ -1,13 +1,13 @@
 // Shared "make an agent actually usable" operations: installing the VS Code
-// extension and merging OpenCode's provider config. Used by BOTH the CLI
-// setup wizard (setup.ts) and the dashboard API's UI wizard endpoints
-// (api.ts) — kept in its own module (rather than in either of those two) so
-// neither has to import the other and create a circular dependency.
+// extension (ours, plus Cline's), and installing the Goose + Cline CLIs.
+// Used by BOTH the CLI setup wizard (setup.ts) and the dashboard API's UI
+// wizard endpoints (api.ts) — kept in its own module (rather than in either
+// of those two) so neither has to import the other and create a circular
+// dependency.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
-import os from "node:os";
 
 export function which(bin: string): boolean {
   try {
@@ -18,28 +18,79 @@ export function which(bin: string): boolean {
   }
 }
 
-export async function mergeOpencodeConfig(block: Record<string, unknown>): Promise<string> {
-  const dir = join(os.homedir(), ".config", "opencode");
-  const file = join(dir, "opencode.json");
-  mkdirSync(dir, { recursive: true });
-  let existing: Record<string, unknown> = {};
-  if (existsSync(file)) {
-    try {
-      existing = JSON.parse(readFileSync(file, "utf8"));
-    } catch {
-      /* corrupt/empty file — start fresh rather than crash the wizard */
-    }
+function findVscodeCli(): string | null {
+  if (which("code")) return "code";
+  if (
+    process.platform === "darwin" &&
+    existsSync("/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code")
+  ) {
+    return "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code";
   }
-  const merged = {
-    ...existing,
-    provider: { ...(existing.provider as object | undefined), ...(block.provider as object) },
-  };
-  writeFileSync(file, JSON.stringify(merged, null, 2));
-  return file;
+  return null;
 }
 
-/** Runs the vsix build+package+install chain — the same steps documented in
- *  TESTING.md — so this can never silently drift from what a human would type. */
+/**
+ * Installs the Goose CLI (github.com/block/goose). Verified 2026-07-28:
+ * Homebrew formula `block-goose-cli` is the official, reproducible install
+ * path on macOS; the alternative is a curl-piped install script
+ * (`download_cli.sh`, supports CONFIGURE=false for non-interactive install) —
+ * used as a fallback where Homebrew isn't available. Apache-2.0.
+ */
+export async function installGooseCli(log: (line: string) => void): Promise<void> {
+  if (which("goose")) {
+    log("goose already installed, skipping");
+    return;
+  }
+  if (which("brew")) {
+    log("$ brew install block-goose-cli");
+    execFileSync("brew", ["install", "block-goose-cli"], { stdio: "pipe" });
+    return;
+  }
+  log("$ curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | CONFIGURE=false bash");
+  execFileSync(
+    "bash",
+    ["-c", "curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | CONFIGURE=false bash"],
+    { stdio: "pipe" }
+  );
+}
+
+/**
+ * Installs the Cline CLI (npm package "cline", github.com/cline/cline).
+ * Verified 2026-07-28: `npm install -g cline` installs a prebuilt per-platform
+ * binary (bin: cline), no separate Node runtime needed at run time. Apache-2.0.
+ */
+export async function installClineCli(log: (line: string) => void): Promise<void> {
+  if (which("cline")) {
+    log("cline already installed, skipping");
+    return;
+  }
+  log("$ npm install -g cline");
+  execFileSync("npm", ["install", "-g", "cline"], { stdio: "pipe" });
+}
+
+/**
+ * Installs Cline's own VS Code extension (marketplace id
+ * saoudrizwan.claude-dev, verified 2026-07-28) — separate from the CLI,
+ * since Cline is fundamentally a VS Code-first tool and its settings UI is
+ * the one confirmed-reliable way to configure a custom base URL (see
+ * connect.ts's connectClineWith for why the CLI alone isn't enough yet).
+ */
+export function installClineVscodeExtension(log: (line: string) => void): { installed: boolean; note: string } {
+  const codeBin = findVscodeCli();
+  if (!codeBin) return { installed: false, note: "VS Code's `code` CLI not found — install Cline manually from the marketplace (saoudrizwan.claude-dev)." };
+  log(`$ ${codeBin} --install-extension saoudrizwan.claude-dev`);
+  try {
+    execFileSync(codeBin, ["--install-extension", "saoudrizwan.claude-dev"], { stdio: "pipe" });
+    return { installed: true, note: "" };
+  } catch (e) {
+    return { installed: false, note: (e as Error).message };
+  }
+}
+
+/** Runs the AgentDyno vsix build+package+install chain — the same steps
+ *  documented in TESTING.md — so this can never silently drift from what a
+ *  human would type. Also installs the Goose + Cline CLIs and Cline's own
+ *  VS Code extension, per the "one install gets you everything" scope. */
 export async function installVscodeExtension(repoRoot: string, log: (line: string) => void): Promise<void> {
   const dir = join(repoRoot, "vscode-extension");
   if (!existsSync(dir)) throw new Error(`${dir} not found — is this a full agentdyno checkout?`);
@@ -51,12 +102,7 @@ export async function installVscodeExtension(repoRoot: string, log: (line: strin
   run("npm", ["run", "build"]);
   run("npx", ["--yes", "@vscode/vsce", "package", "--no-dependencies", "--allow-missing-repository"]);
   const vsixName = "agentdyno-vscode-0.1.0.vsix";
-  const codeBin = which("code")
-    ? "code"
-    : process.platform === "darwin" &&
-        existsSync("/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code")
-      ? "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
-      : null;
+  const codeBin = findVscodeCli();
   if (!codeBin) {
     throw new Error(
       "packaged the extension but couldn't find VS Code's `code` CLI — install it from " +
@@ -65,6 +111,24 @@ export async function installVscodeExtension(repoRoot: string, log: (line: strin
     );
   }
   run(codeBin, ["--install-extension", join(dir, vsixName), "--force"]);
+
+  log("installing Goose CLI...");
+  try {
+    await installGooseCli(log);
+  } catch (e) {
+    log(`goose install failed (non-fatal): ${(e as Error).message}`);
+  }
+
+  log("installing Cline CLI...");
+  try {
+    await installClineCli(log);
+  } catch (e) {
+    log(`cline CLI install failed (non-fatal): ${(e as Error).message}`);
+  }
+
+  log("installing Cline's VS Code extension...");
+  const clineExt = installClineVscodeExtension(log);
+  if (!clineExt.installed) log(`(skipped: ${clineExt.note})`);
 }
 
 /**

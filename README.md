@@ -5,7 +5,7 @@
 AgentDyno is the dyno bench for local coding agents. It scans your machine,
 finds the open models that fit, launches them correctly — and then actually
 proves, with a five-probe agentic exam on your own hardware, that a model can
-drive tools before you wire Claude Code, OpenCode, or Aider to it.
+drive tools before you wire Claude Code, Goose, or Cline to it.
 
 Local, free, Apache-2.0. No accounts, no telemetry, no paid tier.
 
@@ -29,8 +29,9 @@ node dist/src/cli.js setup       # guided: pick UI or CLI, ends with a connected
 ```
 
 `dyno setup` is the fast path: scan → pick a model → activate → run the exam
-→ connect Claude Code / OpenCode / Aider (auto-launched in a new terminal) or
-install the VS Code extension — one flow instead of the manual steps below.
+→ connect Claude Code / Goose / Cline (auto-launched in a new terminal) or
+install the VS Code extension (which also installs the Goose + Cline CLIs and
+Cline's own extension) — one flow instead of the manual steps below.
 
 Or run each step yourself:
 
@@ -79,7 +80,10 @@ beats unverified, always.
   over the same scan/switch/doctor/connect logic: hardware panel, switcher
   table with one-click activate, live doctor exam, connect-config generator.
 - `vscode-extension/` — a thin VS Code wrapper (not a reimplementation) that
-  starts the dashboard and embeds it in a webview. Build a `.vsix` with
+  starts the dashboard and embeds it in a webview. Installing it also installs
+  the [Goose](https://github.com/block/goose) and [Cline](https://cline.bot)
+  CLIs and Cline's own VS Code extension (`saoudrizwan.claude-dev`) — the two
+  agents AgentDyno battle-tests as first-class targets. Build a `.vsix` with
   `cd vscode-extension && npm install && npm run build && npx @vscode/vsce package`.
 
 ## The exam (`doctor`)
@@ -119,8 +123,8 @@ and SHA-256 checksums — see `tools/build-catalog.ts`.
   OpenAI and Anthropic APIs — AgentDyno manages it so the flags are right.
 
 NOTE: Anthropic has not publicly stated whether pointing Claude Code at
-non-Anthropic backends is permitted (anthropics/claude-code#5577). OpenCode
-and Aider are fully-open first-class targets here.
+non-Anthropic backends is permitted (anthropics/claude-code#5577). Goose and
+Cline are fully-open first-class targets here.
 
 ## License
 

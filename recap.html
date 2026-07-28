@@ -143,6 +143,27 @@ array. Graded F, correctly, by the exam that already existed.</li>
 same one rule as everywhere else in this project: verified beats unverified, always.</li>
 </ul>
 
+<h2>// v0.5.0 — connect targets swapped: OpenCode/Aider out, Goose/Cline in</h2>
+<p>Scope change, directed explicitly: drop OpenCode and Aider as connect targets; make
+<a href="https://github.com/block/goose">Goose</a> (Block) and <a href="https://cline.bot">Cline</a>
+first-class instead, auto-installed by the VS Code extension and setup wizard. Earlier sections above
+that mention OpenCode/Aider describe the state <em>at the time they were written</em> — left as-is
+rather than rewritten, per this project's practice of appending corrections instead of erasing history.</p>
+<p><strong>Battle-tested live, not just read about</strong> (2026-07-28): installed the real Goose CLI
+(<span class="mono">brew install block-goose-cli</span>) and ran it against our own managed
+llama-server. A closed, unresolved GitHub issue (block/goose#3979) claims connection failures against
+bare llama-server — that did <strong>not</strong> reproduce. What did reproduce exactly matches this
+project's thesis: asked to create a file, the grade-F model (Qwen2.5-Coder-3B) returned the tool call as
+JSON-in-markdown <em>text</em> and no file was written; the grade-B model (Qwen3-8B) executed the same
+task correctly and the file appeared with the exact requested content. Goose's reliability tracks the
+<span class="mono">doctor</span> grade directly, not a Goose-specific bug — the connect output was
+corrected to say this instead of repeating the stale issue.</p>
+<p>Cline has a real, separately-installable CLI (npm package <span class="mono">cline</span>, confirmed
+live) and a VS Code extension (<span class="mono">saoudrizwan.claude-dev</span>), but its CLI has
+<strong>no documented flag for a custom base URL</strong> — a real, verified gap, not glossed over. The
+setup wizard installs both Cline's CLI and its VS Code extension and states this limitation plainly
+rather than promising an automation that current docs don't support.</p>
+
 <h2>// deliverables map</h2>
 <table class="map">
 <tr><th>artifact</th><th>what it is</th></tr>

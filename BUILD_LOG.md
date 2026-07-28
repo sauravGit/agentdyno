@@ -590,3 +590,50 @@ Format: each entry = date, decision/question, answer, why, evidence.
   package.json's contributes.viewsContainers/views match the built extension
   exactly. VS Code needs a window reload to pick up new view containers
   (standard behavior, not specific to this extension).
+
+### D-025: Goose + Cline replace OpenCode + Aider (user-directed scope change)
+- User directive: drop OpenCode/Aider as connect targets; make Goose (Block)
+  and Cline first-class instead, with the VS Code extension installer also
+  installing both CLIs (and Cline's own VS Code extension).
+- Fact-checked BEFORE writing any code (3 parallel research agents + direct
+  verification): Cline has a real standalone CLI (npm package "cline",
+  confirmed live via registry.npmjs.org — bin: cline), a VS Code extension
+  (saoudrizwan.claude-dev, confirmed via marketplace fetch), Apache-2.0.
+  Goose install verified: `brew install block-goose-cli` (macOS) or a
+  curl-piped script with CONFIGURE=false for non-interactive install; fully
+  scriptable via env vars (GOOSE_PROVIDER/GOOSE_MODEL/OPENAI_HOST/
+  OPENAI_BASE_PATH/OPENAI_API_KEY), Apache-2.0.
+- HONEST GAP FOUND AND KEPT VISIBLE: Cline's CLI has no documented flag for a
+  custom base URL (checked docs.cline.bot/cli/cli-reference directly). Rather
+  than guess an unpublished providers.json schema, connect.ts's Cline output
+  states this plainly and gives the confirmed-reliable path (Cline's own
+  Settings UI) as primary, CLI flags as best-effort.
+- BATTLE-TESTED LIVE (not just researched) per the user's explicit "after
+  battle testing it" instruction: installed the real Goose CLI via Homebrew,
+  ran `goose run` against our own managed llama-server. A closed, unresolved
+  GitHub issue (block/goose#3979) claims connection failures against bare
+  llama-server — did NOT reproduce; basic chat worked immediately. Then ran
+  an actual tool-driving task (create a file with specific content):
+  - grade-F model (Qwen2.5-Coder-3B): Goose's "write" tool call came back as
+    JSON-in-markdown TEXT, not a real tool_calls array — no file created.
+  - grade-B model (Qwen3-8B): same task executed correctly, file created
+    with exact requested content.
+  This is a real, live-verified confirmation that Goose's reliability tracks
+  this project's own `doctor` grade exactly, not a Goose-specific defect —
+  and it caught my own FIRST DRAFT being wrong: I had initially written a
+  warning citing issue #3979 as if it were a live risk, based on research
+  alone. Live testing proved that citation misleading and I corrected the
+  connect.ts output and its tests before shipping, rather than leaving an
+  inaccurate warning in a tool whose whole purpose is measuring reliability
+  honestly.
+- Removed: connectOpencode/connectAider, OpenCode/Aider branches in
+  launchSpecFor, agentops.ts's mergeOpencodeConfig, all UI buttons/choices,
+  CLI help text, across cli.ts/api.ts/setup.ts/connect.ts/site/*/README/
+  TESTING.md. recap.html's historical sections were left as-is (accurate at
+  the time they were written) with a new dated addendum appended, per this
+  project's practice of correcting forward rather than editing history.
+- New agentops.ts functions: installGooseCli, installClineCli,
+  installClineVscodeExtension — all wired into installVscodeExtension so one
+  install (CLI wizard option 4, or the .vsix directly) sets up everything.
+- 39/39 tests passing (5 new/updated in test/connect.test.js covering the
+  corrected Goose behavior and Cline's documented gap).

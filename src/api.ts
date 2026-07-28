@@ -13,10 +13,10 @@ import { activeBaseUrl, readState, requestModelFor, stopServer, health, BASE_URL
 import { isOllamaRunning } from "./ollama.js";
 import { runExam, type ExamReport } from "./probes.js";
 import type { SwitchCandidate } from "./switch.js";
-import { connectAider, connectClaude, connectOpencode, launchSpecFor, type AgentTarget } from "./connect.js";
+import { connectClaude, connectGoose, connectCline, launchSpecFor, type AgentTarget } from "./connect.js";
 import { loadAllReports, loadReport, saveReport } from "./reports.js";
 import { rankCandidates, activateCandidate } from "./activate.js";
-import { installVscodeExtension, launchInNewTerminal, mergeOpencodeConfig } from "./agentops.js";
+import { installVscodeExtension, launchInNewTerminal } from "./agentops.js";
 
 export const API_PORT = 8403;
 
@@ -193,19 +193,16 @@ export function createApiServer(dashboardRoot: string) {
       if (path === "/api/setup/launch-agent" && req.method === "POST") {
         const body = await readBody(req);
         const target = body.target as AgentTarget | undefined;
-        if (!target || !["claude", "opencode", "aider"].includes(target)) {
-          return json(res, 400, { error: "target must be claude, opencode, or aider" });
+        if (!target || !["claude", "goose", "cline"].includes(target)) {
+          return json(res, 400, { error: "target must be claude, goose, or cline" });
         }
         const s = readState();
         if (!s) return json(res, 409, { error: "no server running" });
         const model = await resolveModel(loadCatalog(), s.modelId);
         const spec = launchSpecFor(target, model, s);
-        if (target === "opencode" && spec.opencodeProviderConfig) {
-          await mergeOpencodeConfig(spec.opencodeProviderConfig);
-        }
         const repoRoot = join(dashboardRoot, "..", "..");
         const result = launchInNewTerminal(spec.bin, spec.args, spec.env, repoRoot);
-        return json(res, 200, result);
+        return json(res, 200, { ...result, manualStepNote: spec.manualStepNote });
       }
 
       if (path === "/api/status" && req.method === "GET") {
@@ -235,13 +232,13 @@ export function createApiServer(dashboardRoot: string) {
         );
       }
 
-      const connectMatch = path.match(/^\/api\/connect\/(claude|opencode|aider)$/);
+      const connectMatch = path.match(/^\/api\/connect\/(claude|goose|cline)$/);
       if (connectMatch && req.method === "GET") {
         const s = readState();
         if (!s) return json(res, 409, { error: "no server running" });
         const m = await resolveModel(loadCatalog(), s.modelId);
         const text =
-          connectMatch[1] === "claude" ? connectClaude(m) : connectMatch[1] === "opencode" ? connectOpencode(m) : connectAider(m);
+          connectMatch[1] === "claude" ? connectClaude(m) : connectMatch[1] === "goose" ? connectGoose(m) : connectCline(m);
         return json(res, 200, { text });
       }
 

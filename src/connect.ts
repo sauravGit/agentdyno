@@ -1,6 +1,10 @@
 // Wire coding agents to the local server. This is the differentiator:
 // each connector applies guardrails derived from researched failure modes
 // (context ceilings, tool-count limits, template correctness).
+//
+// Supported targets: Claude Code, Goose (Block), Cline. OpenCode and Aider
+// were dropped per a scope change — Goose and Cline are the two agents this
+// project now battle-tests and auto-installs instead.
 
 import { activeBaseUrl, readState, requestModelFor } from "./serve.js";
 import type { ServeState } from "./serve.js";
@@ -51,51 +55,88 @@ export ANTHROPIC_SMALL_FAST_MODEL="${requestModel}"
 #    past ~5 tools).
 # NOTE: Anthropic has not publicly stated whether pointing Claude Code at
 # non-Anthropic backends is permitted (github.com/anthropics/claude-code/issues/5577).
-# Fully-open alternatives with first-class support here: mb connect opencode | aider`;
+# Fully-open alternatives with first-class support here: mb connect goose | cline`;
 }
 
-export function connectOpencodeWith(model: CatalogModel, s: ServeState): string {
+/**
+ * Goose (github.com/block/goose): fully scriptable via environment variables
+ * for its "openai" provider — verified against goose-docs.ai and the Docker
+ * blog's own Goose examples 2026-07-28. No interactive `goose configure`
+ * step needed.
+ *
+ * BATTLE-TESTED LIVE on 2026-07-28 (not just read about): a bare
+ * block/goose issue (#3979) reports connection errors against llama-server,
+ * but that did NOT reproduce here — `goose run` connected to our managed
+ * llama-server without issue on both a grade-F and a grade-B model. What DID
+ * reproduce exactly matches this project's own thesis: against the grade-F
+ * model (Qwen2.5-Coder-3B) Goose's "write" tool call came back as JSON-in-
+ * markdown TEXT and no file was created; against the grade-B model
+ * (Qwen3-8B) the same task produced a real tool call and the file was
+ * written correctly. Goose's reliability tracks the `doctor` grade, not a
+ * Goose-specific bug — so the guidance below leans on that grade rather
+ * than repeating the stale, unreproduced GitHub issue.
+ */
+export function connectGooseWith(model: CatalogModel, s: ServeState): string {
   const baseUrl = activeBaseUrl(s);
   const requestModel = publicModelId(model, s);
-  return `# OpenCode -> local ${model.displayName}
-# Add to ~/.config/opencode/opencode.json under "provider":
-{
-  "provider": {
-    "magix-box": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "magix-box (local)",
-      "options": { "baseURL": "${baseUrl}/v1" },
-      "models": {
-        "${requestModel}": { "name": "${model.displayName}", "limit": { "context": ${s.context}, "output": 8192 } }
-      }
-    }
-  }
-}
-# then: opencode -m magix-box/${requestModel}`;
-}
-
-export function connectAiderWith(model: CatalogModel, s: ServeState): string {
-  const baseUrl = activeBaseUrl(s);
-  const requestModel = publicModelId(model, s);
-  return `# Aider -> local ${model.displayName}
-export OPENAI_API_BASE="${baseUrl}/v1"
+  return `# Goose -> local ${model.displayName}
+export GOOSE_PROVIDER="openai"
+export GOOSE_MODEL="${requestModel}"
+export OPENAI_HOST="${baseUrl}"
+export OPENAI_BASE_PATH="v1/chat/completions"
 export OPENAI_API_KEY="magix-box-local"
-aider --model openai/${requestModel} \\
-  --map-tokens 1024
-# Guardrail: server context is ${s.context} tokens (no silent 2k truncation:
-# magix-box sets the real context on the server, not the client).`;
+goose run --model ${requestModel}
+# or: goose session
+
+# Guardrail: server context is ${s.context} tokens; long sessions will compact early.
+# local ${model.paramsB}B-class models are weaker than frontier models. Goose's
+# reliability tracks your \`dyno doctor\` grade directly — battle-tested: a
+# grade-F model here returned the tool call as text (no file written); a
+# grade-B model executed it correctly. Run doctor before trusting this.`;
+}
+
+/**
+ * Cline (github.com/cline/cline, npm package "cline", VS Code extension
+ * saoudrizwan.claude-dev): confirmed CLI flags are -P/--provider, -m/--model,
+ * -k/--key (verified against docs.cline.bot/cli/cli-reference 2026-07-28).
+ * IMPORTANT VERIFIED GAP: there is no documented CLI flag for a custom base
+ * URL, and the providers.json schema Cline stores config in is not published.
+ * Rather than guess at an undocumented file format, the reliable path is
+ * Cline's own Settings UI (base URL + key + model are confirmed fields
+ * there). The CLI flags below are offered best-effort; if `-P
+ * openai-compatible` doesn't pick up the local server, use the UI steps.
+ */
+export function connectClineWith(model: CatalogModel, s: ServeState): string {
+  const baseUrl = activeBaseUrl(s);
+  const requestModel = publicModelId(model, s);
+  return `# Cline -> local ${model.displayName}
+#
+# Reliable path (VS Code extension, confirmed settings fields):
+#   1. Open the Cline panel in VS Code (installed automatically if you used
+#      the AgentDyno VS Code extension's setup).
+#   2. Settings (gear icon) -> API Provider: "OpenAI Compatible"
+#   3. Base URL: ${baseUrl}/v1
+#      API Key:  magix-box-local
+#      Model ID: ${requestModel}
+#
+# Best-effort CLI (no documented --base-url flag as of writing; set the Base
+# URL once via the Settings UI above first, then this reuses that config):
+cline -P openai-compatible -m ${requestModel} -k magix-box-local
+
+# Guardrail: server context is ${s.context} tokens; local ${model.paramsB}B-class
+# models are weaker than frontier models — expect simpler, slower edits.`;
 }
 
 export function connectClaude(model: CatalogModel): string {
   return connectClaudeWith(model, requireRunning());
 }
 
-export function connectOpencode(model: CatalogModel): string {
-  return connectOpencodeWith(model, requireRunning());
+export function connectGoose(model: CatalogModel): string {
+  return connectGooseWith(model, requireRunning());
 }
 
-export function connectAider(model: CatalogModel): string {
-  return connectAiderWith(model, requireRunning());
+export function connectCline(model: CatalogModel): string {
+  return connectClineWith(model, requireRunning());
 }
 
 // --- Machine-readable launch descriptors -----------------------------------
@@ -104,15 +145,16 @@ export function connectAider(model: CatalogModel): string {
 // instructions about it — so env vars and args are returned as data, not
 // embedded in comment-annotated shell text.
 
-export type AgentTarget = "claude" | "opencode" | "aider";
+export type AgentTarget = "claude" | "goose" | "cline";
 
 export interface LaunchSpec {
   bin: string;
   args: string[];
   env: Record<string, string>;
-  /** For opencode: the provider config block that must be merged into
-   *  ~/.config/opencode/opencode.json before launching (null for the others). */
-  opencodeProviderConfig: Record<string, unknown> | null;
+  /** True when the launch is missing a step docs don't let us automate
+   *  (Cline's base URL) — callers should surface this rather than promise
+   *  a fully-automatic connection. */
+  manualStepNote: string | null;
 }
 
 export function launchSpecFor(target: AgentTarget, model: CatalogModel, s: ServeState): LaunchSpec {
@@ -128,30 +170,33 @@ export function launchSpecFor(target: AgentTarget, model: CatalogModel, s: Serve
         ANTHROPIC_MODEL: requestModel,
         ANTHROPIC_SMALL_FAST_MODEL: requestModel,
       },
-      opencodeProviderConfig: null,
+      manualStepNote: null,
     };
   }
-  if (target === "aider") {
+  if (target === "goose") {
     return {
-      bin: "aider",
-      args: ["--model", `openai/${requestModel}`, "--map-tokens", "1024"],
-      env: { OPENAI_API_BASE: `${baseUrl}/v1`, OPENAI_API_KEY: "magix-box-local" },
-      opencodeProviderConfig: null,
+      bin: "goose",
+      args: ["run", "--model", requestModel],
+      env: {
+        GOOSE_PROVIDER: "openai",
+        GOOSE_MODEL: requestModel,
+        OPENAI_HOST: baseUrl,
+        OPENAI_BASE_PATH: "v1/chat/completions",
+        OPENAI_API_KEY: "magix-box-local",
+      },
+      // Battle-tested 2026-07-28: connectivity to llama-server works fine;
+      // Goose's reliability tracks the model's `doctor` grade, not a
+      // Goose-specific quirk (see connectGooseWith's doc comment for the
+      // live test). No standing caveat needed here.
+      manualStepNote: null,
     };
   }
   return {
-    bin: "opencode",
-    args: ["-m", `magix-box/${requestModel}`],
+    bin: "cline",
+    args: ["-P", "openai-compatible", "-m", requestModel, "-k", "magix-box-local"],
     env: {},
-    opencodeProviderConfig: {
-      provider: {
-        "magix-box": {
-          npm: "@ai-sdk/openai-compatible",
-          name: "magix-box (local)",
-          options: { baseURL: `${baseUrl}/v1` },
-          models: { [requestModel]: { name: model.displayName, limit: { context: s.context, output: 8192 } } },
-        },
-      },
-    },
+    manualStepNote:
+      `Cline has no documented CLI flag for a custom base URL. Before this works, open the Cline ` +
+      `panel in VS Code once -> Settings -> API Provider: OpenAI Compatible -> Base URL: ${baseUrl}/v1.`,
   };
 }

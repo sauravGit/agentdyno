@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { MODELS_DIR, ensureDirs, findModel, loadCatalog, resolveModel } from "./catalog.js";
 import { DEFAULT_CONTEXT, rankFits } from "./fit.js";
-import { connectAider, connectClaude, connectOpencode } from "./connect.js";
+import { connectClaude, connectGoose, connectCline } from "./connect.js";
 import { GRADE_MEANING, runExam } from "./probes.js";
 import { fetchLeaderboard } from "./leaderboard.js";
 import { pullModel, pullRuntime } from "./pull.js";
@@ -133,9 +133,9 @@ async function cmdConnect() {
     }
   }
   if (target === "claude") console.log(connectClaude(m));
-  else if (target === "opencode") console.log(connectOpencode(m));
-  else if (target === "aider") console.log(connectAider(m));
-  else throw new Error("usage: mb connect <claude|opencode|aider>");
+  else if (target === "goose") console.log(connectGoose(m));
+  else if (target === "cline") console.log(connectCline(m));
+  else throw new Error("usage: mb connect <claude|goose|cline>");
 }
 
 async function cmdStatus() {
@@ -217,7 +217,7 @@ usage: mb <command>
   serve [<model>] [--context N] [--stop]   run the local server (Anthropic+OpenAI APIs)
   serve --ollama <tag> [--context N]       activate a model already pulled into Ollama
   doctor                   the agentic readiness exam: 5 probes, grade A-F
-  connect <claude|opencode|aider>          wire an agent to the VERIFIED local server
+  connect <claude|goose|cline>              wire an agent to the VERIFIED local server
   status                   server + verification status
   dashboard                local web UI + API (loopback only, http://127.0.0.1:8403)
 

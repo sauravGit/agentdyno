@@ -17,7 +17,7 @@ import { runExam } from "./probes.js";
 import { saveReport } from "./reports.js";
 import { activeBaseUrl, requestModelFor, readState } from "./serve.js";
 import { launchSpecFor, type AgentTarget } from "./connect.js";
-import { which, mergeOpencodeConfig, installVscodeExtension } from "./agentops.js";
+import { which, installVscodeExtension } from "./agentops.js";
 import { startApiServer, API_PORT } from "./api.js";
 
 const MODE_LABEL: Record<string, string> = {
@@ -45,11 +45,7 @@ async function launchAgent(target: AgentTarget, repoRoot: string): Promise<{ lau
   const models = loadCatalog();
   const model = models.find((m) => m.id === state.modelId) ?? (await resolveModel(models, state.modelId));
   const spec = launchSpecFor(target, model, state);
-
-  if (target === "opencode" && spec.opencodeProviderConfig) {
-    const file = await mergeOpencodeConfig(spec.opencodeProviderConfig);
-    console.log(`wrote provider config: ${file}`);
-  }
+  if (spec.manualStepNote) console.log(`\nNOTE: ${spec.manualStepNote}`);
 
   if (!which(spec.bin)) {
     return {
@@ -143,11 +139,11 @@ async function cliWizard(repoRoot: string, rl: readline.Interface) {
   }
 
   console.log("\nwhich coding interface do you want to use?");
-  console.log("  [1] Claude Code\n  [2] OpenCode\n  [3] Aider\n  [4] VS Code extension\n  [5] skip — I'll connect manually");
+  console.log("  [1] Claude Code\n  [2] Goose\n  [3] Cline\n  [4] VS Code extension (installs Goose + Cline CLIs and Cline's extension too)\n  [5] skip — I'll connect manually");
   const choice = (await ask(rl, "pick a number: ")).trim();
 
   if (choice === "4") {
-    console.log("\ninstalling the VS Code extension (build + package + install)...");
+    console.log("\ninstalling the VS Code extension + Goose CLI + Cline CLI + Cline's extension...");
     try {
       await installVscodeExtension(repoRoot, (l) => console.log("  " + l));
       console.log("\ndone — open VS Code and click the AgentDyno icon in the activity bar.");
@@ -158,10 +154,10 @@ async function cliWizard(repoRoot: string, rl: readline.Interface) {
     return;
   }
 
-  const targetMap: Record<string, AgentTarget> = { "1": "claude", "2": "opencode", "3": "aider" };
+  const targetMap: Record<string, AgentTarget> = { "1": "claude", "2": "goose", "3": "cline" };
   const target = targetMap[choice];
   if (!target) {
-    console.log("\nskipped — run `dyno connect <claude|opencode|aider>` any time.");
+    console.log("\nskipped — run `dyno connect <claude|goose|cline>` any time.");
     rl.close();
     return;
   }
