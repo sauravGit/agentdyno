@@ -133,18 +133,22 @@ footer .links{margin-bottom:10px}
   <h2>// quickstart</h2>
   <div class="panel"><pre>
 <span class="c"># macOS (Apple Silicon or Intel), Linux; Windows experimental</span>
-git clone https://github.com/sauravGit/agentdyno && cd agentdyno
-npm install && npm run build
+<span class="c">brew install sauravGit/agentdyno/agentdyno</span>
+<span class="c"># or: npm install -g agentdyno</span>
 
-node dist/src/cli.js scan     <span class="c"># what this machine really has</span>
-node dist/src/cli.js fit      <span class="c"># which models fit, ranked, max agent context</span>
-node dist/src/cli.js pull qwen2.5-coder-7b
-node dist/src/cli.js serve    <span class="c"># managed llama-server, correct flags</span>
-node dist/src/cli.js doctor   <span class="c"># the exam: 5 probes, grade A-F</span>
-node dist/src/cli.js connect goose    <span class="c"># wire an agent to the VERIFIED server</span></pre></div>
+dyno setup    <span class="c"># guided: scan -> fit -> pull -> serve -> doctor -> connect, in one flow</span></pre></div>
+  <p class="notice" style="margin-top:0">Or run each step yourself:</p>
+  <div class="panel"><pre>
+dyno scan     <span class="c"># what this machine really has</span>
+dyno fit      <span class="c"># which models fit, ranked, max agent context</span>
+dyno pull qwen2.5-coder-7b
+dyno serve    <span class="c"># managed llama-server, correct flags</span>
+dyno doctor   <span class="c"># the exam: 5 probes, grade A-F</span>
+dyno connect goose    <span class="c"># wire an agent to the VERIFIED server</span></pre></div>
   <p class="notice">Under the hood: honest fit math from real GGUF geometry (weights + KV cache +
   overhead vs. your platform's true budget), SHA-256-verified downloads, and llama.cpp's
-  llama-server — which natively speaks both the OpenAI and Anthropic APIs.</p>
+  llama-server — which natively speaks both the OpenAI and Anthropic APIs.
+  Building from source instead: <a href="https://github.com/sauravGit/agentdyno#install">see the README</a>.</p>
 </section>
 
 <section>

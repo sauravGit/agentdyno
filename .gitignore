@@ -6,3 +6,4 @@ research/upstream/
 .DS_Store
 *.tgz
 *.vsix
+.env

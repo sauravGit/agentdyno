@@ -13,7 +13,7 @@ import type { CatalogModel } from "./types.js";
 
 function requireRunning() {
   const s = readState();
-  if (!s) throw new Error("no server running; run mb serve first");
+  if (!s) throw new Error("no server running; run dyno serve first");
   return s;
 }
 

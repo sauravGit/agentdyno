@@ -1,0 +1,26 @@
+cli:
+  - src/**/*
+
+vscode-extension:
+  - vscode-extension/**/*
+
+docs:
+  - '**/*.md'
+  - site/**/*
+  - brand/**/*
+  - recap.html
+
+tests:
+  - test/**/*
+
+ci:
+  - .github/**/*
+
+dependencies:
+  - package.json
+  - package-lock.json
+  - vscode-extension/package.json
+  - vscode-extension/package-lock.json
+
+release:
+  - RELEASE_NOTES*.md

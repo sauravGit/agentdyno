@@ -718,3 +718,120 @@ Format: each entry = date, decision/question, answer, why, evidence.
   TESTING.md that showed the now-removed `connect claude` command, so the
   guide never shows output from a command that no longer exists.
 - 41/41 tests passing (one net removal: the claude-specific launch-spec test).
+
+### D-028: VS Code chat participant, clean-slate reinstall, and the real npm/Homebrew publish pipeline
+- User directive: `dyno setup` should offer to clean up a previous install
+  before running again, and AgentDyno should get a proper `@agentdyno` icon
+  in VS Code's Chat view next to Copilot (distinct from the activity-bar
+  icon shipped in D-021 — that's a sidebar panel, this is the Chat view).
+- Chat participant: `contributes.chatParticipants` (stable API, engine bumped
+  to ^1.100.0), `/status` `/doctor` `/connect goose|cline` slash commands, all
+  thin wrappers over the existing dashboard API — no logic duplicated for
+  chat. Battle-tested live: activated a real model, ran a real doctor exam
+  (graded B), fetched real Goose/Cline configs through the participant's own
+  code paths. Caught a real bug this way: the fetch helper resolves on any
+  parseable JSON regardless of HTTP status, so `/api/connect/*`'s 409
+  `{error}` response would have rendered as literal "undefined" in the chat
+  reply — fixed by checking `result.error` explicitly.
+- Clean-slate flow: new `checkResidue()`/`cleanResidue()` in agentops.ts.
+  Config/state (server.pid, lan-token, remote.json, reports) is safe to
+  always offer; downloaded models (multi-GB) and the VS Code extension are
+  opt-in per category, never wiped as a side effect. A first draft of
+  `dyno clean` uninstalled the VS Code extension by default whenever one was
+  detected — caught by actually running the command against this machine,
+  fixed to be opt-in only (`--vscode-extension`).
+- Also fixed while building this: `installVscodeExtension()` had the
+  packaged `.vsix` filename hardcoded to a specific version string, which
+  would have silently broken the moment the extension's own version changed
+  (as it did, 0.1.0 -> 0.2.0, in this same batch of work) — now reads
+  name+version from the extension's own package.json.
+- npm/Homebrew publish, decided and executed end to end (user explicitly
+  delegated the npm-vs-PyPI-vs-brew call): npm (right ecosystem for a
+  Node/TS CLI) + a Homebrew tap, skip PyPI entirely. Real, non-obvious
+  problems found only by actually running each step, not by reading the
+  config:
+  1. `files` array bundled the VS Code extension's entire `node_modules`
+     (its own TypeScript devDependency) — 26 MB/182 files, cut to
+     1.5 MB/40 files by listing explicit sub-paths instead of the whole
+     directory (a root `.npmignore` did NOT reliably exclude a nested
+     `node_modules` inside an explicitly-listed `files` entry — verified via
+     repeated `npm pack --dry-run`, not assumed).
+  2. `bonjour-service@^1.4.4` had no older fallback in range, and 1.4.4 was
+     published to npm ~90 minutes before a Homebrew install attempt — Homebrew's
+     npm-install cooldown (refuses packages newer than a few days old, a
+     supply-chain safety guard) rejected it with ETARGET. Relaxed to ^1.4.3.
+  3. The GitHub release the tap pointed at was on a PRIVATE repo — Homebrew's
+     plain unauthenticated curl 404'd on the asset. Repo made public.
+  4. `npm-publish.yml`'s trigger was `release: types: [created]`, which only
+     fires for DRAFT releases — a directly-published release (what
+     `gh release create` produces) fires `published` instead. Confirmed via
+     the Actions API: 0 runs across two real releases before the fix.
+  5. The `publish-npm` job ran on its own fresh checkout with no `dist/` (a
+     separate job from the one that ran the build) — first successful
+     trigger published a 20-file tarball missing the `dyno` binary entirely.
+     Fixed by adding `npm run build` before `npm publish` in that job.
+  6. `node --test 'test/*.test.js'` (quoted) depends on Node's own internal
+     glob resolution, unsupported on Node 20 (CI's pinned version) though it
+     always worked locally on Node 26 — reproduced and confirmed the fix
+     (unquoted, shell-expanded glob) against a real Node 20 Docker container,
+     not just asserted.
+  7. The user's first granular npm token didn't have "Bypass two-factor
+     authentication" checked (off by default) — CI publish failed with EOTP
+     since a headless job can't answer an OTP prompt. Fixed with a
+     regenerated token.
+  8. Five release tags (v0.7.0 -> v0.7.4) were needed to work through the
+     above one real failure at a time. `agentdyno@0.7.4` is now live on the
+     public npm registry; `brew install sauravGit/agentdyno/agentdyno` and
+     `npm install -g agentdyno` were both re-verified end to end afterward
+     (fresh uninstall/untap, fresh install, `dyno --version`) — including
+     pointing the tap at the canonical `registry.npmjs.org` tarball instead
+     of the GitHub-release workaround, now that the registry path works.
+- 41/41 tests passing throughout (Node 20 container + local Node 26, both
+  confirmed independently).
+
+### D-029: Professional-pass on docs and site; `mb`/`magix-box` branding cleanup; real `.github/labeler.yml`
+- User directive: make the README look like a professional product README,
+  update the marketing site, turn TESTING.md into a step-by-step onboarding
+  guide, and make the already-added `label.yml` workflow actually do
+  something (it referenced a `.github/labeler.yml` config file that never
+  existed, so it was a silent no-op).
+- README.md: added npm-version/license/node-engine badges (shields.io, live
+  and always accurate since they read the actual registry/repo rather than
+  being hand-typed), a real screenshot, install via `brew`/`npm` as the
+  primary path with source-checkout demoted to a collapsed `<details>`
+  section, a full command reference table, and an explicit LAN/remote-mode
+  section and VS Code chat-participant section that didn't exist in the
+  README before (they were only in BUILD_LOG/TESTING). Verified every
+  file/path the new README references actually exists in the repo
+  (`research/REPORT.md`, `tools/build-catalog.ts`, screenshots) rather than
+  assuming.
+- TESTING.md renamed to ONBOARDING.md (`git mv`, history preserved) and
+  reframed from a verification-testing tone to a getting-started tone:
+  install section leads with `brew`/`npm` instead of git-clone-only, test
+  count corrected from a stale 32 to the real 41, the VS Code section's
+  `.vsix` version references corrected from 0.1.0 to 0.2.0 (stale since
+  D-028's chat-participant work bumped the extension), the fast-path section
+  now mentions the clean-slate check, and a new step covers the
+  `@agentdyno` chat participant (`/status` `/doctor` `/connect`) that
+  ONBOARDING's predecessor (TESTING.md) predates entirely. Step 2 (test
+  suite) is now explicitly marked optional/source-only, since a
+  brew/npm-installed user has no source tree to run `npm test` against —
+  the old version silently assumed everyone had cloned the repo.
+- Found and fixed a real, separate bug while doing this pass: the CLI's own
+  `--help` output and several error strings still said `magix-box` / `usage:
+  mb <command>` — leftover from before the project's rename to AgentDyno/
+  `dyno`. Swept `src/cli.ts`, `src/serve.ts`, `src/connect.ts` for every
+  `mb <subcommand>` string and corrected them to `dyno <subcommand>`; left
+  `~/.magix-box` (the actual on-disk config directory name) untouched since
+  renaming that would break every existing install for zero user-facing
+  benefit. Rebuilt and reran the full suite (41/41) after the sweep to
+  confirm nothing depended on the old strings.
+- site/index.html: quickstart section updated from git-clone-only to lead
+  with `brew install`/`npm install -g`, matching the README.
+- `.github/labeler.yml` created — confirmed via GitHub's own docs that
+  `actions/labeler@v4` (the version pinned in the existing workflow) uses a
+  flat glob-list-per-label format, NOT the newer `changed-files:
+  any-glob-to-any-file` nesting introduced in later major versions; using
+  the wrong schema would have made every label silently match nothing.
+  Labels: cli, vscode-extension, docs, tests, ci, dependencies, release,
+  scoped to this repo's actual directory layout.

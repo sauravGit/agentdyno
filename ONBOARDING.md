@@ -1,13 +1,14 @@
-# Testing AgentDyno — a step-by-step guide for new users
+# Onboarding: getting started with AgentDyno
 
-Every step below is **input you type** and **expected output** — captured from a
-real run on a MacBook Air (Apple M4, 16 GB) so you know what "working" looks
-like before you try it yourself. Numbers (tok/s, GiB, grades) will differ on
-your machine — that's the point of the tool. Commands and shape shouldn't.
+This is a step-by-step walkthrough — **input you type** and **the output
+you'll actually see** — captured from a real run on a MacBook Air (Apple M4,
+16 GB), so you know what "working" looks like as you go. Numbers (tok/s, GiB,
+grades) will differ on your machine — that's the point of the tool. Commands
+and shape shouldn't.
 
-Total time: ~15 minutes for the CLI fast path (small model). Add ~10-15
-minutes for the optional F-vs-B demo in Step 7, and ~5 minutes for the
-optional VS Code extension in Step 12.
+Total time: ~15 minutes to get a verified model connected to an agent. Add
+~10-15 minutes for the optional F-vs-B comparison in Step 7, and ~5 minutes
+for the optional VS Code extension in Step 12.
 
 ---
 
@@ -16,7 +17,6 @@ optional VS Code extension in Step 12.
 | Need | Check | Expected |
 |---|---|---|
 | Node.js >= 20 | `node --version` | `v20.x.x` or higher |
-| npm | `npm --version` | any recent version |
 | ~5 GB free disk | `df -h .` | plenty free (models are 2-5 GB each) |
 | macOS Intel/Silicon, or Linux | — | Windows is experimental, untested |
 
@@ -26,39 +26,38 @@ optional VS Code extension in Step 12.
 
 **Input:**
 ```sh
-git clone https://github.com/sauravGit/agentdyno
-cd agentdyno
-npm install
-npm run build
+brew install sauravGit/agentdyno/agentdyno
 ```
-
-**Expected output** (last few lines):
-```
-> agentdyno@0.3.0 build
-> tsc
-```
-No errors. A `dist/` directory now exists next to `src/`.
-
-**Verify the build works:**
+or
 ```sh
-node dist/src/cli.js
+npm install -g agentdyno
+```
+
+**Verify:**
+```sh
+dyno --version
+```
+**Expected output:** the installed version number, e.g. `0.7.4`.
+
+```sh
+dyno
 ```
 **Expected output:**
 ```
-magix-box — prove your machine can run a coding agent, then wire it up.
+AgentDyno — prove your machine can run a coding agent, then wire it up.
 
-usage: mb <command>
+usage: dyno <command>
 
+  setup                    guided setup: scan -> fit -> pull -> serve -> doctor -> connect, in one flow
   scan                     honest hardware report (--json)
   fit [--context N]        which models fit THIS machine, ranked (--json)
-  switch                   ranked model switcher: verified grade beats unverified prior
   ...
 Local, free, no accounts, no telemetry. Apache-2.0.
 ```
 
-> Every command below is written as `node dist/src/cli.js <command>`. If you'd
-> rather type `dyno <command>`, run `npm link` once (optional) and use that
-> instead — same binary either way.
+> Every command below is written as `dyno <command>`. If you installed from
+> source instead (see the README's "From source" section), use
+> `node dist/src/cli.js <command>` in its place — same binary either way.
 
 ---
 
@@ -71,7 +70,7 @@ want to understand or test each piece on its own.
 
 **Input:**
 ```sh
-node dist/src/cli.js setup
+dyno setup
 ```
 
 **Expected output:**
@@ -81,6 +80,14 @@ AgentDyno setup — how would you like to do this?
   [2] Guided CLI, right here
 pick a number [1/2]:
 ```
+
+**If you've run AgentDyno before**, `setup` checks for leftovers first (a
+previous state file, saved reports, an already-installed VS Code extension)
+and asks whether to clean up for a fresh start before showing the prompt
+above. Say no and it leaves everything as-is; say yes and it asks
+follow-up questions per category (downloaded models are opt-in to delete,
+since they're multi-GB and re-downloadable). Same thing is available any time
+as `dyno clean`.
 
 **Choosing `1` (UI)**: starts the dashboard server and opens
 `http://127.0.0.1:8403/setup.html` in your browser — a step-by-step wizard:
@@ -104,7 +111,10 @@ pseudo-terminal instead, e.g. with `expect` rather than a plain pipe.
 
 ---
 
-## 2. Run the test suite (proves the logic works without touching a model)
+## 2. Run the test suite (optional — source checkouts only)
+
+If you installed via `brew`/`npm install -g`, skip to Step 3 — there's no
+source tree to test against. If you cloned the repo:
 
 **Input:**
 ```sh
@@ -113,15 +123,15 @@ npm test
 
 **Expected output** (end of a longer list):
 ```
-ℹ tests 32
+ℹ tests 41
 ℹ suites 0
-ℹ pass 32
+ℹ pass 41
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
 ```
-All 32 pass. These run against fixtures — no model download, no running
+All 41 pass. These run against fixtures — no model download, no running
 daemon, no network needed. If this fails, stop here and check your Node
 version before continuing.
 
@@ -131,7 +141,7 @@ version before continuing.
 
 **Input:**
 ```sh
-node dist/src/cli.js scan
+dyno scan
 ```
 
 **Expected output** (real example, Apple M4 / 16 GB):
@@ -148,7 +158,7 @@ note      Apple Silicon default GPU budget modeled at 65% of unified RAM
 Monitor / `System Settings > General > About`, or `free -h` on Linux). If it's
 wildly wrong, something is broken — file an issue with this output attached.
 
-**Also try:** `node dist/src/cli.js scan --json` — same data as machine-readable JSON.
+**Also try:** `dyno scan --json` — same data as machine-readable JSON.
 
 ---
 
@@ -156,7 +166,7 @@ wildly wrong, something is broken — file an issue with this output attached.
 
 **Input:**
 ```sh
-node dist/src/cli.js fit
+dyno fit
 ```
 
 **Expected output** (real example — yours will differ by RAM/GPU, but the
@@ -171,7 +181,7 @@ Llama 3.2 3B Instruct                Q4_K_M   4.8 GiB   comfortable    53920    
 Qwen2.5 Coder 3B Instruct            Q4_K_M   3.6 GiB   comfortable    32768    B
 Qwen2.5 Coder 7B Instruct            Q6_K     7.9 GiB   comfortable    32768    C
 ...
-tools column: catalog grade for tool-calling (A best). Run mb doctor to VERIFY on this machine.
+tools column: catalog grade for tool-calling (A best). Run dyno doctor to VERIFY on this machine.
 ```
 
 **What to check:**
@@ -187,7 +197,7 @@ tools column: catalog grade for tool-calling (A best). Run mb doctor to VERIFY o
 
 **Input:**
 ```sh
-node dist/src/cli.js pull qwen2.5-coder-3b --quant Q4_K_M
+dyno pull qwen2.5-coder-3b --quant Q4_K_M
 ```
 
 **Expected output** (trimmed — you'll see a live progress line that updates
@@ -215,7 +225,7 @@ subsequent `pull`s skip that step.
 
 **Input:**
 ```sh
-node dist/src/cli.js serve qwen2.5-coder-3b
+dyno serve qwen2.5-coder-3b
 ```
 
 **Expected output:**
@@ -227,7 +237,7 @@ endpoints: OpenAI /v1/chat/completions | Anthropic /v1/messages
 
 **What to check:**
 ```sh
-node dist/src/cli.js status
+dyno status
 ```
 **Expected output:**
 ```
@@ -250,7 +260,7 @@ curl -s http://127.0.0.1:8402/v1/chat/completions \
 
 **Input:**
 ```sh
-node dist/src/cli.js doctor
+dyno doctor
 ```
 
 **Expected output** (takes 1-3 minutes; 5 probes run against your live
@@ -278,10 +288,10 @@ can grade differently.
 **Try the bigger model too** (optional, ~20-30 min total — this reproduces
 the F-vs-B story from the launch video):
 ```sh
-node dist/src/cli.js serve --stop
-node dist/src/cli.js pull qwen3-8b
-node dist/src/cli.js serve qwen3-8b
-node dist/src/cli.js doctor
+dyno serve --stop
+dyno pull qwen3-8b
+dyno serve qwen3-8b
+dyno doctor
 ```
 **Expected output** (real example on the same machine):
 ```
@@ -301,7 +311,7 @@ Same laptop, different model, night-and-day difference — see it for yourself.
 
 **Input:**
 ```sh
-node dist/src/cli.js connect goose
+dyno connect goose
 ```
 
 **Expected output** (real captured run):
@@ -335,7 +345,7 @@ project verified it live (see BUILD_LOG.md D-025).
 
 **Also try:**
 ```sh
-node dist/src/cli.js connect cline
+dyno connect cline
 ```
 AgentDyno deliberately does not support Claude Code as a connect target —
 Anthropic has never publicly stated whether pointing it at a non-Anthropic
@@ -349,7 +359,7 @@ Each prints a different, correct config for that specific tool.
 
 **Input:**
 ```sh
-node dist/src/cli.js switch
+dyno switch
 ```
 
 **Expected output** (grades change based on what you've run `doctor` on so far):
@@ -372,7 +382,7 @@ your own eyes here.
 
 **One-command activate:**
 ```sh
-node dist/src/cli.js switch --activate
+dyno switch --activate
 ```
 **Expected output:** pulls (if needed) + serves the #1 ranked pick automatically.
 
@@ -382,7 +392,7 @@ node dist/src/cli.js switch --activate
 
 **Input:**
 ```sh
-node dist/src/cli.js dashboard
+dyno dashboard
 ```
 
 **Expected output:**
@@ -414,7 +424,7 @@ Skip this section if you don't use [Ollama](https://ollama.com). If you do:
 ```sh
 ollama serve &                        # your own daemon, in its own terminal
 ollama pull qwen2.5-coder:3b          # ollama's own registry
-node dist/src/cli.js serve --ollama qwen2.5-coder:3b
+dyno serve --ollama qwen2.5-coder:3b
 ```
 
 **Expected output:**
@@ -426,13 +436,13 @@ endpoints: OpenAI /v1/chat/completions | Anthropic /v1/messages
 
 **Then run the exact same commands as before:**
 ```sh
-node dist/src/cli.js doctor
-node dist/src/cli.js connect goose
+dyno doctor
+dyno connect goose
 ```
 **Expected output:** identical shape to Step 7/8, just sourced from Ollama
 instead of our managed llama-server. `status` will show `backend: ollama`.
 
-**What to check:** `node dist/src/cli.js serve --stop` should NOT stop your
+**What to check:** `dyno serve --stop` should NOT stop your
 Ollama daemon (check with `ollama list` afterward — it should still respond).
 AgentDyno only forgets its own bookkeeping; it never owns your Ollama process.
 
@@ -457,7 +467,7 @@ cd vscode-extension
 npm install
 npm run build
 npx --yes @vscode/vsce package --no-dependencies --allow-missing-repository
-code --install-extension agentdyno-vscode-0.1.0.vsix
+code --install-extension agentdyno-vscode-0.2.0.vsix
 ```
 (If `code` isn't on your PATH: open the Command Palette in VS Code ->
 "Shell Command: Install 'code' command in PATH" once, or use the full path
@@ -467,7 +477,7 @@ to the bundled CLI, e.g. on macOS:
 **Expected output:**
 ```
 Installing extensions...
-Extension 'agentdyno-vscode-0.1.0.vsix' was successfully installed.
+Extension 'agentdyno-vscode-0.2.0.vsix' was successfully installed.
 ```
 
 **Verify it's really installed:**
@@ -476,7 +486,7 @@ code --list-extensions --show-versions | grep agentdyno
 ```
 **Expected output:**
 ```
-agentdyno.agentdyno-vscode@0.1.0
+agentdyno.agentdyno-vscode@0.2.0
 ```
 
 **Finish it yourself with 3 clicks** (a CLI can install the extension and
@@ -488,13 +498,25 @@ for anything to automate safely):
    `Ctrl+Shift+P`), type **AgentDyno: Open Dashboard**, press Enter.
    **Expected:** if `dyno dashboard` isn't already running, VS Code asks
    "AgentDyno dashboard is not running. Start it?" — click **Start it**.
-2. **Expected:** an integrated terminal opens and runs `node dist/src/cli.js
-   dashboard`; after a moment a new editor panel opens beside it showing the
-   AgentDyno dashboard (same UI as Step 10) inside a webview.
+2. **Expected:** an integrated terminal opens and runs `dyno dashboard`; after
+   a moment a new editor panel opens beside it showing the AgentDyno
+   dashboard (same UI as Step 10) inside a webview.
 3. Try the **AgentDyno: Start Dashboard Server** command directly too — it
    should just (re)start the terminal command without opening the webview.
 4. Open the Extensions view (icon in the left activity bar) and find
    AgentDyno — you should see the gauge-mark icon, not a generic placeholder.
+
+**Try the chat participant:** open VS Code's Chat view (the same panel
+Copilot Chat lives in) and type `@agentdyno` — it should appear in the
+participant picker next to Copilot. With a model activated, try:
+- `@agentdyno /status` — server + verified grade
+- `@agentdyno /doctor` — runs the exam from chat, streams progress, prints
+  the same PASS/FAIL table as Step 7
+- `@agentdyno /connect goose` (or `cline`) — the same connect config as
+  Step 8, inline in chat
+
+All three call the same local dashboard API as the CLI — nothing about the
+answer is reimplemented for chat.
 
 **Uninstall when done** (optional):
 ```sh
@@ -507,13 +529,14 @@ code --uninstall-extension agentdyno.agentdyno-vscode
 
 **Input:**
 ```sh
-node dist/src/cli.js serve --stop
+dyno serve --stop
 ```
 **Expected output:** `server stopped`
 
-**To reclaim disk space** (optional — deletes downloaded models/runtime):
+**To reclaim disk space** (deletes downloaded models + the llama.cpp runtime;
+config/state is removed too and rebuilds automatically):
 ```sh
-rm -rf ~/.magix-box
+dyno clean --models
 ```
 
 ---
@@ -522,7 +545,8 @@ rm -rf ~/.magix-box
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `npx tsc` / `npm run build` fails | Node < 20 | `node --version`, upgrade if needed |
+| `dyno: command not found` | shell hasn't picked up the new PATH entry | open a new terminal, or check `brew --prefix`/`npm bin -g` is on `PATH` |
+| `npx tsc` / `npm run build` fails (source installs) | Node < 20 | `node --version`, upgrade if needed |
 | `pull` fails partway | flaky network | just re-run — it resumes |
 | `doctor` says "no server running" | forgot Step 6 | run `serve` first, `doctor` examines the LIVE server |
 | every model grades F | server started but never loaded (check `~/.magix-box/logs/llama-server.log`) | confirm `status` shows the model you expect |

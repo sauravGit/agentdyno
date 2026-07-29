@@ -83,15 +83,15 @@ export async function startServer(
   const existing = readState();
   if (existing) {
     throw new Error(
-      `server already running (pid ${existing.pid}, model ${existing.modelId}); use mb serve --stop first`
+      `server already running (pid ${existing.pid}, model ${existing.modelId}); use dyno serve --stop first`
     );
   }
   const modelPath = join(MODELS_DIR, fit.quant.filename);
   if (!existsSync(modelPath)) {
-    throw new Error(`model not downloaded: run mb pull ${fit.model.id}`);
+    throw new Error(`model not downloaded: run dyno pull ${fit.model.id}`);
   }
   const serverBin = serverBinPath();
-  if (!existsSync(serverBin)) throw new Error("runtime missing: run mb pull --runtime");
+  if (!existsSync(serverBin)) throw new Error("runtime missing: run dyno pull --runtime");
 
   // Context: requested, else the fitted comfortable max (floor 4096, capped by window).
   const context = Math.min(
@@ -157,7 +157,7 @@ export async function startOllamaServer(modelTag: string, context: number): Prom
   const existing = readState();
   if (existing) {
     throw new Error(
-      `server already running (pid ${existing.pid}, model ${existing.modelId}); use mb serve --stop first`
+      `server already running (pid ${existing.pid}, model ${existing.modelId}); use dyno serve --stop first`
     );
   }
   if (!(await isOllamaRunning())) {

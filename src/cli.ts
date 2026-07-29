@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// magix-box CLI — mb <command>
+// AgentDyno CLI — dyno <command>
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -61,13 +61,13 @@ async function cmdFit() {
     const ctx = String(f.maxComfortableContext).padEnd(8);
     console.log(`${name} ${quant} ${need} ${mode} ${ctx} ${f.model.toolCallGrade}`);
   }
-  console.log("\ntools column: catalog grade for tool-calling (A best). Run mb doctor to VERIFY on this machine.");
+  console.log("\ntools column: catalog grade for tool-calling (A best). Run dyno doctor to VERIFY on this machine.");
 }
 
 async function cmdPull() {
   if (has("--runtime")) return void (await pullRuntime());
   const id = process.argv[3];
-  if (!id) throw new Error("usage: mb pull <model-id> [--quant Q4_K_M] | mb pull --runtime");
+  if (!id) throw new Error("usage: dyno pull <model-id> [--quant Q4_K_M] | dyno pull --runtime");
   const models = loadCatalog();
   const m = findModel(models, id);
   const qname = arg("--quant");
@@ -98,7 +98,7 @@ async function cmdServe() {
     existsSync(join(MODELS_DIR, f.quant.filename))
   );
   const pick = id ? fits.find((f) => f.model.id === findModel(models, id).id) : fits[0];
-  if (!pick) throw new Error(id ? `model ${id} not downloaded (mb pull ${id})` : "no downloaded models; run mb pull <model>");
+  if (!pick) throw new Error(id ? `model ${id} not downloaded (dyno pull ${id})` : "no downloaded models; run dyno pull <model>");
   console.log(`starting ${pick.model.displayName} ${pick.quant.quant} (${MODE_LABEL[pick.mode]}, ctx ${context ?? pick.maxComfortableContext})...`);
   const s = await startServer(pick, hw, { context });
   console.log(`ready: http://127.0.0.1:${s.port} (pid ${s.pid}, context ${s.context})`);
@@ -107,7 +107,7 @@ async function cmdServe() {
 
 async function cmdDoctor() {
   const s = readState();
-  if (!s) throw new Error("no server running; run mb serve first (doctor examines the LIVE server)");
+  if (!s) throw new Error("no server running; run dyno serve first (doctor examines the LIVE server)");
   console.log(`examining ${s.modelId} at context ${s.context} — 5 probes, ~1-3 min on laptop hardware\n`);
   const report = await runExam(s.modelId, s.context, { baseUrl: activeBaseUrl(s), requestModel: requestModelFor(s) });
   for (const r of report.results) {
@@ -123,7 +123,7 @@ async function cmdDoctor() {
 
 async function cmdConnect() {
   const target = process.argv[3];
-  if (!["goose", "cline"].includes(target)) throw new Error("usage: mb connect <goose|cline>");
+  if (!["goose", "cline"].includes(target)) throw new Error("usage: dyno connect <goose|cline>");
 
   const remote = loadRemoteConfig();
   if (remote) {
@@ -135,11 +135,11 @@ async function cmdConnect() {
   }
 
   const s = readState();
-  if (!s) throw new Error("no server running; run mb serve first (or `dyno remote connect` to use another machine's server)");
+  if (!s) throw new Error("no server running; run dyno serve first (or `dyno remote connect` to use another machine's server)");
   const m = await resolveModel(loadCatalog(), s.modelId);
   const report = loadReport(s.modelId);
   if (!report) {
-    console.log("WARNING: this model has not passed mb doctor on this machine — config below is UNVERIFIED\n");
+    console.log("WARNING: this model has not passed dyno doctor on this machine — config below is UNVERIFIED\n");
   } else {
     console.log(`verified: grade ${report.grade} on this machine (${new Date(report.when).toLocaleString()})\n`);
     if (report.grade === "C" || report.grade === "F") {
@@ -283,7 +283,7 @@ async function cmdSwitch() {
       console.log(`${name} ${quant} ${grade} ${verdict} ${ext}`);
     }
     console.log("\ngrade column: real doctor grade (A/B/C/F) if verified on this machine, else 'X?' = untested catalog prior.");
-    console.log("run: mb switch <model-id>   to pull+serve+activate a specific pick, or mb switch --activate for the top-ranked one.");
+    console.log("run: dyno switch <model-id>   to pull+serve+activate a specific pick, or dyno switch --activate for the top-ranked one.");
     return;
   }
 
@@ -293,12 +293,12 @@ async function cmdSwitch() {
   console.log(`activating ${pick.fit.model.displayName} ${pick.fit.quant.quant} (${pick.verified ? "verified " + pick.gradeLabel : "unverified, prior " + pick.gradeLabel})...`);
   const { state } = await activateCandidate(pick, hw, (step) => console.log(`  ${step}...`));
   console.log(`ready: ${state.backend === "ollama" ? "http://127.0.0.1:11434" : `http://127.0.0.1:${state.port}`} (context ${state.context})`);
-  if (!pick.verified) console.log("NOTE: unverified on this machine — run mb doctor before connecting an agent.");
+  if (!pick.verified) console.log("NOTE: unverified on this machine — run dyno doctor before connecting an agent.");
 }
 
-const HELP = `magix-box — prove your machine can run a coding agent, then wire it up.
+const HELP = `AgentDyno — prove your machine can run a coding agent, then wire it up.
 
-usage: mb <command>
+usage: dyno <command>
 
   setup                    guided setup: scan -> fit -> pull -> serve -> doctor -> connect, in one flow
   scan                     honest hardware report (--json)
