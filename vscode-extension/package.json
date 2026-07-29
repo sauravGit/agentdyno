@@ -2,15 +2,36 @@
   "name": "agentdyno-vscode",
   "displayName": "AgentDyno",
   "description": "Thin wrapper: opens the AgentDyno local dashboard (scan/fit/switch/doctor/connect) inside VS Code. Requires the AgentDyno CLI (github.com/sauravGit/agentdyno) checked out on disk — this extension does not bundle it.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "agentdyno",
   "icon": "icon.png",
   "license": "Apache-2.0",
-  "engines": { "vscode": "^1.85.0" },
+  "engines": { "vscode": "^1.100.0" },
   "categories": ["Other"],
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
+    "chatParticipants": [
+      {
+        "id": "agentdyno.chat",
+        "name": "agentdyno",
+        "fullName": "AgentDyno",
+        "description": "Local model status, the doctor exam, and Goose/Cline connect configs — talks to your local `dyno dashboard`.",
+        "isSticky": true,
+        "commands": [
+          { "name": "status", "description": "Server + verified-grade status" },
+          { "name": "doctor", "description": "Run the 5-probe agentic readiness exam" },
+          { "name": "connect", "description": "Get a Goose or Cline connect config: /connect goose or /connect cline" }
+        ],
+        "disambiguation": [
+          {
+            "category": "agentdyno",
+            "description": "Questions about the locally running AgentDyno model server, its verified grade, or connecting Goose/Cline to it.",
+            "examples": ["Is my local model server running?", "What grade did doctor give this model?", "Get me the Goose connect config"]
+          }
+        ]
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         { "id": "agentdyno", "title": "AgentDyno", "icon": "activitybar-icon.svg" }
@@ -45,7 +66,7 @@
     "build": "tsc -p ."
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
+    "@types/vscode": "^1.100.0",
     "typescript": "^5.6.0"
   }
 }

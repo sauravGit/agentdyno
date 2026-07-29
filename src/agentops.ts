@@ -6,8 +6,10 @@
 // dependency.
 
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, rmSync, unlinkSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { HOME, MODELS_DIR, RUNTIME_DIR, LOGS_DIR } from "./catalog.js";
+import { REPORTS_DIR } from "./reports.js";
 
 export function which(bin: string): boolean {
   try {
@@ -101,7 +103,8 @@ export async function installVscodeExtension(repoRoot: string, log: (line: strin
   run("npm", ["install"]);
   run("npm", ["run", "build"]);
   run("npx", ["--yes", "@vscode/vsce", "package", "--no-dependencies", "--allow-missing-repository"]);
-  const vsixName = "agentdyno-vscode-0.1.0.vsix";
+  const extPkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+  const vsixName = `${extPkg.name}-${extPkg.version}.vsix`;
   const codeBin = findVscodeCli();
   if (!codeBin) {
     throw new Error(
@@ -129,6 +132,116 @@ export async function installVscodeExtension(repoRoot: string, log: (line: strin
   log("installing Cline's VS Code extension...");
   const clineExt = installClineVscodeExtension(log);
   if (!clineExt.installed) log(`(skipped: ${clineExt.note})`);
+}
+
+const VSIX_MARKETPLACE_ID = "agentdyno.agentdyno-vscode";
+
+export interface ResidueStatus {
+  /** State/config left by a previous run: server.pid, lan-token, remote.json, saved reports. */
+  configFiles: string[];
+  /** Downloaded model weights + llama-server runtime — large, expensive to re-fetch. */
+  modelsPresent: boolean;
+  modelsBytes: number;
+  vscodeExtensionInstalled: boolean;
+  /** True if there is anything at all worth asking the user about. */
+  any: boolean;
+}
+
+function dirSize(dir: string): number {
+  if (!existsSync(dir)) return 0;
+  try {
+    const out = execFileSync("du", ["-sk", dir], { encoding: "utf8" });
+    return parseInt(out.trim().split(/\s+/)[0], 10) * 1024;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Detects leftovers from a previous AgentDyno install, so a re-install can
+ * ask "clean previous residue first?" instead of silently mixing old state
+ * (a stale server.pid, an old pairing token, reports for a model you no
+ * longer have) into a fresh setup run. Deliberately separates cheap-to-lose
+ * config/state from expensive-to-lose model weights: cleaning is opt-in per
+ * category, not all-or-nothing.
+ */
+export function checkResidue(): ResidueStatus {
+  const configFiles = [
+    join(HOME, "server.pid"),
+    join(HOME, "lan-token"),
+    join(HOME, "remote.json"),
+    REPORTS_DIR,
+  ].filter(existsSync);
+
+  const modelsPresent = existsSync(MODELS_DIR) && dirSize(MODELS_DIR) > 0;
+  const modelsBytes = modelsPresent ? dirSize(MODELS_DIR) + dirSize(RUNTIME_DIR) : 0;
+
+  let vscodeExtensionInstalled = false;
+  const codeBin = findVscodeCli();
+  if (codeBin) {
+    try {
+      const list = execFileSync(codeBin, ["--list-extensions"], { encoding: "utf8" });
+      vscodeExtensionInstalled = list.toLowerCase().includes(VSIX_MARKETPLACE_ID);
+    } catch {
+      // code CLI present but listing failed — treat as "unknown", not "installed".
+    }
+  }
+
+  return {
+    configFiles,
+    modelsPresent,
+    modelsBytes,
+    vscodeExtensionInstalled,
+    any: configFiles.length > 0 || modelsPresent || vscodeExtensionInstalled,
+  };
+}
+
+export interface CleanOptions {
+  /** Wipe server.pid / lan-token / remote.json / saved reports. */
+  config: boolean;
+  /** Also delete downloaded model weights + the llama-server runtime (multi-GB, re-downloadable). */
+  models: boolean;
+  /** Also uninstall the previously-installed AgentDyno VS Code extension (it gets reinstalled fresh right after). */
+  vscodeExtension: boolean;
+}
+
+/** Executes the clean-up a user opted into. Never throws on a missing path — residue is best-effort by nature. */
+export function cleanResidue(opts: CleanOptions, log: (line: string) => void = () => {}): void {
+  if (opts.config) {
+    for (const p of [join(HOME, "server.pid"), join(HOME, "lan-token"), join(HOME, "remote.json")]) {
+      if (existsSync(p)) {
+        log(`removing ${p}`);
+        try {
+          unlinkSync(p);
+        } catch {
+          /* best-effort */
+        }
+      }
+    }
+    if (existsSync(REPORTS_DIR)) {
+      log(`removing ${REPORTS_DIR}`);
+      rmSync(REPORTS_DIR, { recursive: true, force: true });
+    }
+  }
+  if (opts.models) {
+    for (const d of [MODELS_DIR, RUNTIME_DIR, LOGS_DIR]) {
+      if (existsSync(d)) {
+        log(`removing ${d}`);
+        rmSync(d, { recursive: true, force: true });
+      }
+    }
+  }
+  if (opts.vscodeExtension) {
+    const codeBin = findVscodeCli();
+    if (codeBin) {
+      log(`$ ${codeBin} --uninstall-extension ${VSIX_MARKETPLACE_ID}`);
+      try {
+        execFileSync(codeBin, ["--uninstall-extension", VSIX_MARKETPLACE_ID], { stdio: "pipe" });
+      } catch {
+        /* wasn't installed, or code CLI balked — non-fatal either way */
+      }
+    }
+  }
 }
 
 /**

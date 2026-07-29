@@ -72,6 +72,20 @@ a{color:var(--accent)}
   <div class="brand">agentd<span class="n">y</span>no</div>
   <div class="subtitle">guided setup — scan, fit, serve, doctor, connect. one flow, no manual steps.</div>
 
+  <div id="stepResidue" class="panel" style="display:none">
+    <h2>// found a previous install</h2>
+    <div id="residueList" class="kv"></div>
+    <p class="muted">Config/state (server pid, pairing token, saved exam reports) can be wiped safely — they rebuild automatically. Downloaded models are large and re-downloadable, so they're off unless you ask.</p>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px" id="wipeModelsRow">
+      <input type="checkbox" id="wipeModels"> also delete downloaded models + runtime
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:13px" id="wipeVscodeRow">
+      <input type="checkbox" id="wipeVscode"> also uninstall the existing VS Code extension (reinstalls fresh if you pick that option below)
+    </label>
+    <button id="cleanBtn">Clean and start fresh</button>
+    <button class="ghost" id="keepBtn">Keep as-is and continue</button>
+  </div>
+
   <div class="steps" id="stepDots"></div>
 
   <div id="stepMachine" class="panel" style="display:none">
@@ -296,8 +310,43 @@ document.querySelectorAll(".choice").forEach((b) =>
   b.addEventListener("click", () => selectAgentChoice(b.getAttribute("data-choice")))
 );
 
-showStep("machine");
-loadMachine();
+async function checkResidueAndStart() {
+  const residue = await api("/api/setup/residue");
+  if (!residue.any) {
+    showStep("machine");
+    loadMachine();
+    return;
+  }
+  $("#stepResidue").style.display = "block";
+  const rows = [];
+  if (residue.configFiles.length > 0) rows.push(`<div class="k">config/state</div><div>${residue.configFiles.length} file(s) under ~/.magix-box</div>`);
+  if (residue.vscodeExtensionInstalled) rows.push(`<div class="k">VS Code</div><div>AgentDyno extension already installed</div>`);
+  if (residue.modelsPresent) rows.push(`<div class="k">models</div><div>${fmtBytes(residue.modelsBytes)} downloaded</div>`);
+  $("#residueList").innerHTML = rows.join("");
+  $("#wipeModelsRow").style.display = residue.modelsPresent ? "flex" : "none";
+  $("#wipeVscodeRow").style.display = residue.vscodeExtensionInstalled ? "flex" : "none";
+
+  $("#cleanBtn").addEventListener("click", async () => {
+    $("#cleanBtn").disabled = true;
+    $("#keepBtn").disabled = true;
+    await api("/api/setup/clean", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ models: $("#wipeModels").checked, vscodeExtension: $("#wipeVscode").checked }),
+    });
+    $("#stepResidue").style.display = "none";
+    showStep("machine");
+    loadMachine();
+  }, { once: true });
+
+  $("#keepBtn").addEventListener("click", () => {
+    $("#stepResidue").style.display = "none";
+    showStep("machine");
+    loadMachine();
+  }, { once: true });
+}
+
+checkResidueAndStart();
 </script>
 </body>
 </html>

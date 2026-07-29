@@ -17,7 +17,7 @@ import type { SwitchCandidate } from "./switch.js";
 import { connectGoose, connectCline, launchSpecFor, type AgentTarget } from "./connect.js";
 import { loadAllReports, loadReport, saveReport } from "./reports.js";
 import { rankCandidates, activateCandidate } from "./activate.js";
-import { installVscodeExtension, launchInNewTerminal } from "./agentops.js";
+import { installVscodeExtension, launchInNewTerminal, checkResidue, cleanResidue } from "./agentops.js";
 import { getOrCreateLanToken } from "./lan.js";
 
 export const API_PORT = 8403;
@@ -203,6 +203,20 @@ export function createApiServer(dashboardRoot: string, options: ApiServerOptions
 
       if (path === "/api/server/stop" && req.method === "POST") {
         return json(res, 200, { stopped: stopServer() });
+      }
+
+      if (path === "/api/setup/residue" && req.method === "GET") {
+        return json(res, 200, checkResidue());
+      }
+
+      if (path === "/api/setup/clean" && req.method === "POST") {
+        const body = await readBody(req);
+        const log: string[] = [];
+        cleanResidue(
+          { config: true, models: !!body.models, vscodeExtension: !!body.vscodeExtension },
+          (line) => log.push(line)
+        );
+        return json(res, 200, { cleaned: true, log });
       }
 
       if (path === "/api/setup/install-vscode" && req.method === "POST") {

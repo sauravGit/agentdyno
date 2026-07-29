@@ -31,6 +31,54 @@ async function ensureRepoPath(): Promise<string | undefined> {
   return repoPath;
 }
 
+function apiGet(url: string, timeoutMs = 4000): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const req = http.get(url, { timeout: timeoutMs }, (res) => {
+      const chunks: Buffer[] = [];
+      res.on("data", (c) => chunks.push(c));
+      res.on("end", () => {
+        try {
+          resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    req.on("error", reject);
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("timed out"));
+    });
+  });
+}
+
+function apiPost(url: string, body: unknown = {}, timeoutMs = 4000): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const payload = Buffer.from(JSON.stringify(body));
+    const req = http.request(
+      url,
+      { method: "POST", timeout: timeoutMs, headers: { "Content-Type": "application/json", "Content-Length": payload.length } },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (c) => chunks.push(c));
+        res.on("end", () => {
+          try {
+            resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+          } catch (e) {
+            reject(e);
+          }
+        });
+      }
+    );
+    req.on("error", reject);
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("timed out"));
+    });
+    req.end(payload);
+  });
+}
+
 function pingDashboard(url: string, timeoutMs = 800): Promise<boolean> {
   return new Promise((resolve) => {
     const req = http.get(`${url}/api/status`, { timeout: timeoutMs }, (res) => {
@@ -131,8 +179,107 @@ function openWebview(url: string) {
 </head><body><iframe src="${url}"></iframe></body></html>`;
 }
 
+/**
+ * Chat participant handler — a thin wrapper same as the rest of this
+ * extension: every answer comes from the local dashboard API (src/api.ts),
+ * never reimplemented here. Falls back to a clear "start it" message if the
+ * dashboard isn't running, since a dead server is the most likely reason a
+ * request fails.
+ */
+function chatHandler(
+  dashboardUrlDefault: string
+): (
+  request: vscode.ChatRequest,
+  chatContext: vscode.ChatContext,
+  stream: vscode.ChatResponseStream,
+  token: vscode.CancellationToken
+) => Promise<void> {
+  return async (request, _chatContext, stream) => {
+    const url = config().get<string>("dashboardUrl") ?? dashboardUrlDefault;
+    const up = await pingDashboard(url);
+    if (!up) {
+      stream.markdown(
+        "AgentDyno's dashboard isn't running. Start it with the **AgentDyno: Start Dashboard Server** command, or run `dyno dashboard` in a terminal, then ask again."
+      );
+      return;
+    }
+
+    if (request.command === "status") {
+      const s = await apiGet(`${url}/api/status`);
+      if (!s.server) {
+        stream.markdown("No model server is active. Run `dyno switch --activate` or use the AgentDyno panel to pick one.");
+        return;
+      }
+      stream.markdown(
+        `**model:** ${s.server.modelId}  \n` +
+          `**context:** ${s.server.context}  \n` +
+          `**server:** ${s.serverHealthy ? "healthy" : "not responding"}  \n` +
+          `**verified grade:** ${s.verifiedReport ? s.verifiedReport.grade : "not yet examined — try \`@agentdyno /doctor\`"}`
+      );
+      return;
+    }
+
+    if (request.command === "doctor") {
+      const s = await apiGet(`${url}/api/status`);
+      if (!s.server) {
+        stream.markdown("No model server is active — activate one first, then run the exam.");
+        return;
+      }
+      stream.progress("running the 5-probe agentic readiness exam (1-3 min)...");
+      await apiPost(`${url}/api/doctor`);
+      for (let i = 0; i < 180; i++) {
+        await new Promise((r) => setTimeout(r, 1000));
+        const poll = await apiGet(`${url}/api/status`);
+        if (!poll.doctor?.inProgress) {
+          if (poll.doctor?.result) {
+            const r = poll.doctor.result;
+            stream.markdown(
+              `**grade: ${r.grade}**${r.genTokensPerSec ? ` (${r.genTokensPerSec.toFixed(1)} tok/s)` : ""}  \n` +
+                r.results.map((p: any) => `- ${p.pass ? "PASS" : "FAIL"} ${p.name}`).join("\n")
+            );
+          } else {
+            stream.markdown(`exam failed: ${poll.doctor?.error ?? "unknown error"}`);
+          }
+          return;
+        }
+      }
+      stream.markdown("exam is taking longer than expected — check the AgentDyno panel for progress.");
+      return;
+    }
+
+    if (request.command === "connect") {
+      const target = request.prompt.trim().toLowerCase().includes("cline") ? "cline" : "goose";
+      try {
+        const result = await apiGet(`${url}/api/connect/${target}`);
+        if (result.error || !result.text) {
+          stream.markdown(`No model server is active — activate one first, then ask again. (${result.error ?? "no config returned"})`);
+          return;
+        }
+        stream.markdown(`**${target} connect config:**\n\n\`\`\`\n${result.text}\n\`\`\``);
+      } catch (e) {
+        stream.markdown(`Couldn't reach the dashboard: ${(e as Error).message}`);
+      }
+      return;
+    }
+
+    // No slash command: give a short status line and point at the specifics.
+    const s = await apiGet(`${url}/api/status`).catch(() => null);
+    if (s?.server) {
+      stream.markdown(
+        `Running **${s.server.modelId}** (${s.serverHealthy ? "healthy" : "not responding"}). ` +
+          "Try `/status`, `/doctor`, or `/connect goose|cline`."
+      );
+    } else {
+      stream.markdown("No model server is active. Try `/status`, `/doctor`, or `/connect goose|cline` once one is.");
+    }
+  };
+}
+
 export function activate(context: vscode.ExtensionContext) {
   const provider = new DashboardViewProvider();
+  const participant = vscode.chat.createChatParticipant("agentdyno.chat", chatHandler("http://127.0.0.1:8403"));
+  participant.iconPath = vscode.Uri.joinPath(context.extensionUri, "icon.png");
+  context.subscriptions.push(participant);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider("agentdyno.dashboardView", provider),
     vscode.commands.registerCommand("agentdyno.startServer", async () => {

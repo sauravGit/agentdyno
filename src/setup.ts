@@ -17,7 +17,7 @@ import { runExam } from "./probes.js";
 import { saveReport } from "./reports.js";
 import { activeBaseUrl, requestModelFor, readState } from "./serve.js";
 import { launchSpecFor, type AgentTarget } from "./connect.js";
-import { which, installVscodeExtension } from "./agentops.js";
+import { which, installVscodeExtension, checkResidue, cleanResidue } from "./agentops.js";
 import { startApiServer, API_PORT } from "./api.js";
 
 const MODE_LABEL: Record<string, string> = {
@@ -172,8 +172,53 @@ async function cliWizard(repoRoot: string, rl: readline.Interface) {
   if (!result.launched) console.log(`\n${result.note}`);
 }
 
+/**
+ * Runs first, before either wizard path. Detects leftovers from a previous
+ * install and asks — once — whether to clean before continuing, rather than
+ * silently mixing old state (a stale server.pid, an old pairing token,
+ * reports for a model that's since been removed) into a fresh run.
+ * Model weights are called out separately and off by default: they're
+ * multi-GB and re-downloadable, so wiping them isn't part of "clean slate"
+ * unless the user explicitly asks for it.
+ */
+async function offerCleanSlate(rl: readline.Interface): Promise<void> {
+  const residue = checkResidue();
+  if (!residue.any) return;
+
+  console.log("\nfound leftovers from a previous AgentDyno install:");
+  if (residue.configFiles.length > 0) console.log(`  - config/state: ${residue.configFiles.length} file(s) under ~/.magix-box`);
+  if (residue.vscodeExtensionInstalled) console.log("  - VS Code extension already installed");
+  if (residue.modelsPresent) console.log(`  - downloaded models + runtime: ${formatBytes(residue.modelsBytes)}`);
+
+  const answer = (await ask(rl, "\nclean this up for a fresh start before continuing? [y/N]: ")).trim().toLowerCase();
+  if (answer !== "y") return;
+
+  let wipeModels = false;
+  if (residue.modelsPresent) {
+    const modelsAnswer = (
+      await ask(rl, `also delete the ${formatBytes(residue.modelsBytes)} of downloaded models + runtime (you'll re-download on next pull)? [y/N]: `)
+    ).trim().toLowerCase();
+    wipeModels = modelsAnswer === "y";
+  }
+
+  let wipeVscode = false;
+  if (residue.vscodeExtensionInstalled) {
+    const vscodeAnswer = (
+      await ask(rl, "also uninstall the existing VS Code extension (it'll reinstall fresh if you pick that option below)? [y/N]: ")
+    ).trim().toLowerCase();
+    wipeVscode = vscodeAnswer === "y";
+  }
+
+  cleanResidue(
+    { config: true, models: wipeModels, vscodeExtension: wipeVscode },
+    (line) => console.log(`  ${line}`)
+  );
+  console.log("clean slate ready.\n");
+}
+
 export async function runSetupWizard(repoRoot: string) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  await offerCleanSlate(rl);
   console.log("\nAgentDyno setup — how would you like to do this?");
   console.log("  [1] Guided UI in your browser (recommended)");
   console.log("  [2] Guided CLI, right here");

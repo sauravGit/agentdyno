@@ -5,3 +5,4 @@ research/upstream/
 *.log
 .DS_Store
 *.tgz
+*.vsix

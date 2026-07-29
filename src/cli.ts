@@ -19,6 +19,7 @@ import { startApiServer, API_PORT } from "./api.js";
 import { activateCandidate } from "./activate.js";
 import { runSetupWizard } from "./setup.js";
 import { getOrCreateLanToken, advertiseLan, discoverLan, saveRemoteConfig, loadRemoteConfig, clearRemoteConfig } from "./lan.js";
+import { checkResidue, cleanResidue } from "./agentops.js";
 
 function arg(flag: string): string | null {
   const i = process.argv.indexOf(flag);
@@ -222,6 +223,29 @@ async function cmdRemote() {
   throw new Error("usage: dyno remote <discover|connect|clear|status>");
 }
 
+async function cmdClean() {
+  const residue = checkResidue();
+  if (!residue.any) {
+    console.log("nothing to clean — no previous AgentDyno state found.");
+    return;
+  }
+  console.log("found:");
+  if (residue.configFiles.length > 0) console.log(`  - config/state: ${residue.configFiles.length} file(s) under ~/.magix-box`);
+  if (residue.vscodeExtensionInstalled) console.log("  - VS Code extension installed");
+  if (residue.modelsPresent) console.log(`  - downloaded models + runtime: ${formatBytes(residue.modelsBytes)}`);
+
+  const wipeModels = has("--models");
+  const wipeVscode = has("--vscode-extension");
+  if (residue.modelsPresent && !wipeModels) {
+    console.log("\n(models + runtime left alone — pass --models to also delete them)");
+  }
+  if (residue.vscodeExtensionInstalled && !wipeVscode) {
+    console.log("(VS Code extension left installed — pass --vscode-extension to remove it too)");
+  }
+  cleanResidue({ config: true, models: wipeModels, vscodeExtension: wipeVscode }, (l) => console.log(`  ${l}`));
+  console.log("done.");
+}
+
 async function cmdSwitch() {
   const target = process.argv[3] && !process.argv[3].startsWith("--") ? process.argv[3] : null;
   const activateTop = has("--activate") || target !== null;
@@ -281,6 +305,7 @@ usage: mb <command>
   connect <goose|cline>                     wire an agent to the VERIFIED local server
   status                   server + verification status
   version | --version | -v show the installed AgentDyno version
+  clean [--models] [--vscode-extension]   remove leftover state/config (and optionally models + the VS Code extension)
   dashboard                local web UI + API (loopback only, http://127.0.0.1:8403)
   dashboard --lan          same, but reachable + discoverable on your LAN (pairing token required)
   remote discover          find AgentDyno servers advertised on your LAN
@@ -315,6 +340,7 @@ async function main() {
     dashboard: cmdDashboard,
     remote: cmdRemote,
     version: cmdVersion,
+    clean: cmdClean,
   };
   if (!cmd || !table[cmd]) {
     console.log(HELP);
