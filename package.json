@@ -1,6 +1,6 @@
 {
   "name": "agentdyno",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "The dyno bench for local coding agents: scan your machine, fit the right open model, and PROVE it can drive tools before you wire up Goose or Cline. Includes a guided setup wizard (CLI or browser UI), model switcher, local dashboard/API, LAN/remote mode, VS Code extension, and an Ollama backend.",
   "type": "module",
   "license": "Apache-2.0",
