@@ -224,6 +224,15 @@ async function cmdRemote() {
 }
 
 async function cmdClean() {
+  if (has("--help") || has("-h")) {
+    console.log(
+      "usage: dyno clean [--models] [--vscode-extension]\n\n" +
+        "  removes leftover state/config under ~/.magix-box (server.pid, lan-token, remote.json, reports)\n" +
+        "  --models             also delete downloaded model weights + the llama-server runtime\n" +
+        "  --vscode-extension   also uninstall the AgentDyno VS Code extension"
+    );
+    return;
+  }
   const residue = checkResidue();
   if (!residue.any) {
     console.log("nothing to clean — no previous AgentDyno state found.");
