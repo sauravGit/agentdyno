@@ -55,6 +55,7 @@ necessary, not sufficient. AgentDyno measures the sufficient part.
 | **What it does** | scan hardware → rank models by real fit → run a 5-probe agentic exam → print a config only if it passed |
 | **Verdict format** | a letter grade (A/B/C/F), not a vibe — see [saved certificates](site/certificates/qwen3-8b.html) |
 | **Agents wired up** | [Goose](https://github.com/block/goose), [Cline](https://cline.bot) — both battle-tested live, not just researched |
+| **Reconfiguring after a model switch** | never — Goose/Cline are set up once, against a stable local address that doesn't change |
 | **Where it runs** | your machine only — managed llama-server or your own Ollama daemon |
 | **VS Code** | activity-bar panel **and** a `@agentdyno` chat participant next to Copilot |
 | **Network exposure** | none by default; LAN mode is opt-in and bearer-token gated |
@@ -174,14 +175,28 @@ drop the current remote target.
   D-011). `dyno switch <model-id>` or `--activate` pulls + serves the pick in
   one command.
 - `dyno dashboard` — a loopback-only local web UI + JSON API (`127.0.0.1:8403`)
-  over the same scan/switch/doctor/connect logic.
+  over the same scan/switch/doctor/connect logic. `dyno serve` co-starts this
+  automatically in the background (and stops it together with
+  `dyno serve --stop`) — it's not a standalone always-on service, and running
+  `dyno dashboard` yourself while one is already up just opens the same URL
+  instead of double-starting anything.
+- **The stable gateway**: Goose and Cline are configured once against
+  `127.0.0.1:8403/v1`, not the raw model port — that address never changes,
+  even across `dyno switch` to a different model or a completely different
+  backend (llama-server ↔ Ollama). The proxy forwards to whatever's actually
+  active and rewrites the request's model field server-side, so a value
+  pasted into Cline's settings today never goes stale.
 - **VS Code extension** — a thin wrapper (not a reimplementation) that starts
   the dashboard and embeds it in a webview, with its own activity-bar icon.
   Also registers **`@agentdyno`**, a chat participant that shows up next to
   Copilot in VS Code's Chat view — `/status`, `/doctor`, and
   `/connect goose|cline`, all backed by the same local API. Installing the
   extension also installs the Goose and Cline CLIs and Cline's own VS Code
-  extension (`saoudrizwan.claude-dev`).
+  extension (`saoudrizwan.claude-dev`). The **AgentDyno: Connect Cline**
+  command copies the connect values to your clipboard and opens Cline's
+  settings panel for you — Cline exposes no way for another extension to fill
+  its settings in automatically, so this is the one setup step that stays
+  manual, made as close to one-click as VS Code's extension model allows.
 
 <details>
 <summary>Build the VS Code extension yourself</summary>

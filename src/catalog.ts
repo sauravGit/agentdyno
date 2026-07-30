@@ -11,6 +11,7 @@ export const MODELS_DIR = join(HOME, "models");
 export const RUNTIME_DIR = join(HOME, "runtime");
 export const LOGS_DIR = join(HOME, "logs");
 export const PORT = 8402;
+export const API_PORT = 8403;
 
 export function ensureDirs(): void {
   for (const d of [HOME, MODELS_DIR, RUNTIME_DIR, LOGS_DIR]) {

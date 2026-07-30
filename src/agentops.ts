@@ -5,8 +5,8 @@
 // of those two) so neither has to import the other and create a circular
 // dependency.
 
-import { execFileSync } from "node:child_process";
-import { existsSync, rmSync, unlinkSync, readFileSync } from "node:fs";
+import { execFileSync, spawn } from "node:child_process";
+import { existsSync, rmSync, unlinkSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { HOME, MODELS_DIR, RUNTIME_DIR, LOGS_DIR } from "./catalog.js";
 import { REPORTS_DIR } from "./reports.js";
@@ -288,4 +288,59 @@ export function launchInNewTerminal(
     launched: false,
     note: `auto-launching a new terminal isn't supported on ${process.platform} yet — run this yourself:\n${exports}\n${cmd}`,
   };
+}
+
+const API_DAEMON_PID_FILE = join(HOME, "api-server.pid");
+
+/** Cheap liveness probe for the dashboard/API server on the given port. */
+export async function pingApiServer(port: number, timeoutMs = 800): Promise<boolean> {
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/api/lan/hello`, { signal: AbortSignal.timeout(timeoutMs) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Ensures the lightweight dashboard/API server — and with it, the /v1/*
+ * stable gateway Goose/Cline talk to — is running in the background.
+ * Deliberately NOT an always-on system service (no launchd/systemd
+ * integration, no autostart at login): it is co-started with `dyno serve`
+ * and torn down with `dyno serve --stop` via stopApiDaemonIfAutoStarted(),
+ * so nothing lingers once you're done working. If a dashboard is already
+ * up (auto-started earlier, or the user's own `dyno dashboard`), this is a
+ * no-op — never double-binds the port.
+ */
+export async function ensureApiDaemon(port: number): Promise<void> {
+  if (await pingApiServer(port)) return;
+  const cliPath = process.argv[1];
+  const child = spawn(process.execPath, [cliPath, "_apidaemon"], {
+    detached: true,
+    stdio: "ignore",
+  });
+  child.unref();
+  writeFileSync(API_DAEMON_PID_FILE, JSON.stringify({ pid: child.pid, autoStarted: true }));
+}
+
+/** Stops the API daemon ONLY if this machine's `dyno serve` auto-started it — never touches a dashboard the user launched themselves. */
+export function stopApiDaemonIfAutoStarted(): void {
+  if (!existsSync(API_DAEMON_PID_FILE)) return;
+  try {
+    const info = JSON.parse(readFileSync(API_DAEMON_PID_FILE, "utf8")) as { pid: number; autoStarted: boolean };
+    if (info.autoStarted) {
+      try {
+        process.kill(info.pid);
+      } catch {
+        /* already gone */
+      }
+    }
+  } catch {
+    /* corrupt/missing pid file — nothing to clean up */
+  }
+  try {
+    unlinkSync(API_DAEMON_PID_FILE);
+  } catch {
+    /* already gone */
+  }
 }

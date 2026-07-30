@@ -944,3 +944,96 @@ Format: each entry = date, decision/question, answer, why, evidence.
   the user, who approved it. Wired into site/index.html, recap.html, and README.md; earlier
   cuts (launch.mp4, launch-v2.mp4) kept online and linked, not deleted.
 - 41/41 tests passing (no source code changed in this pass, confirmed as a sanity check).
+
+### D-032: Stable local gateway — Goose/Cline configured once, never touched again
+- User-reported pain point, verified rather than assumed: after `dyno switch`
+  to a different model, Cline's settings silently point at stale information,
+  and the fix required manually re-editing Cline's Settings UI — "cumbersome"
+  for anyone, let alone a non-technical user. Asked to design and build a fix
+  "thinking like Steve Jobs" — remove the friction, don't just document it.
+- Investigated whether AgentDyno could auto-write Cline's config directly
+  (the obvious first idea) — real answer, checked against the actually
+  installed extension's package.json, not guessed: Cline exposes ZERO
+  settings via VS Code's configuration API and no command to set its API
+  provider fields programmatically (`contributes.configuration` is an empty
+  array; its registered commands are all UI-trigger only, e.g.
+  `cline.settingsButtonClicked` just opens the panel). VS Code sandboxes each
+  extension's storage by design — there is no supported door in. This is a
+  Cline-side limitation, not a choice AgentDyno is making.
+- Real, load-bearing finding that reshaped the whole design: llama-server
+  IGNORES the "model" field in requests entirely — proved by sending a
+  request with a deliberately bogus model string and getting a normal
+  response back from the real loaded model, response echoing the real file
+  path regardless of what was sent. Ollama, by contrast, DOES route on this
+  field. This meant the fix could be "make reconfiguration structurally
+  unnecessary" rather than "make reconfiguration easier."
+- **Design considered and rejected**: a true always-on background service
+  (launchd/systemd/Windows-service autostart). Rejected on both a UX and a
+  values basis — it means real OS-level plumbing and uninstall-cleanup
+  surface, a permanently-listening local port whether or not the user is
+  working, and directly contradicts this project's own "no accounts, no
+  telemetry, no subscriptions" positioning (BRAND.md). A process that
+  outlives the work session it belongs to is exactly the pattern the product
+  is positioned against.
+- **Design shipped instead**: the dashboard/API server (already-existing
+  infrastructure, previously only wired up for LAN mode) is now the stable
+  local gateway (`127.0.0.1:<API_PORT>/v1`) for the default/local case too,
+  but co-lifecycled with `dyno serve` rather than run as an independent
+  daemon — `ensureApiDaemon()` spawns it detached only when `dyno serve`
+  starts (no-op if one's already up, e.g. from an earlier `dyno serve` or
+  the user's own `dyno dashboard`), and `stopApiDaemonIfAutoStarted()` tears
+  it down together with `dyno serve --stop`, tracked via a small pid file
+  recording whether THIS mechanism started it (never touches a dashboard the
+  user launched themselves). Nothing lingers once you stop working;
+  `API_PORT` moved from api.ts to catalog.ts first to avoid a circular
+  import (api.ts already imports from connect.ts).
+- The `/v1/*` proxy now force-rewrites the request body's `model` field
+  server-side to whatever's actually active, regardless of what the client
+  sent — the mechanism that makes the "never touch it again" guarantee hold
+  for Ollama too (not just llama-server, which already ignored the field).
+  Caught and fixed a real regression while making this the default local
+  path, not just a LAN nicety: the proxy previously buffered the ENTIRE
+  upstream response before replying, which would have silently killed
+  token-by-token streaming for every interactive chat request once this
+  became the everyday path, not an occasional LAN one — switched to piping
+  the response through (`Readable.fromWeb(upstream.body).pipe(res)`) and
+  verified real SSE chunks arrive progressively, not as one blob.
+- connect.ts's `connectGooseWith`/`connectClineWith`/`launchSpecFor` now all
+  point at the gateway address instead of the raw backend port
+  (`activeBaseUrl`) for local connections; remote (LAN) connect functions
+  were already pointing at the remote's own gateway and needed no change —
+  same pattern, already consistent. Displayed Model ID text is unchanged
+  (still the real catalog id/tag, for a legible one-time setup); the
+  guarantee no longer depends on that value staying accurate, since the
+  proxy corrects it either way.
+- VS Code extension: new **AgentDyno: Connect Cline** command
+  (`agentdyno.connectCline`) — copies Base URL/API Key/Model ID to the
+  clipboard and calls `cline.settingsButtonClicked` to open Cline's panel.
+  Doesn't pretend to fill Cline's fields in (confirmed impossible above);
+  removes every OTHER step instead. Chat participant's `/connect cline`
+  reply now points at this command too. Extension version bumped 0.2.0 ->
+  0.3.0, rebuilt, packaged, and reinstalled to confirm the command actually
+  registers in the real installed extension (checked its package.json
+  directly, not assumed from source).
+- End-to-end verified live, not just unit-tested: started a real model
+  server, confirmed the daemon co-starts and the gateway responds; sent a
+  request through the gateway with a deliberately wrong "model" field and
+  confirmed it still reached the real model; confirmed `dyno dashboard`
+  detects an already-running daemon and opens the URL instead of crashing on
+  a port conflict; confirmed `dyno serve --stop` tears down both the model
+  server AND the auto-started daemon, leaving no processes or pid files
+  behind; confirmed streaming responses arrive as progressive chunks through
+  the gateway, not buffered. Caught and cleaned up one unrelated stale
+  process from earlier manual testing this session that had orphaned itself
+  on port 8402, which briefly produced a confusing false "connected" state —
+  not a bug in this change, but resolved before drawing conclusions from it.
+- test/connect.test.js updated to assert the new gateway-based URLs (8403)
+  instead of raw backend ports (8402/11434) for both backends, plus a new
+  test asserting llama-server and Ollama configs use the IDENTICAL base URL
+  (the actual point of this change — switching backends never touches
+  Goose/Cline). 42/42 tests passing.
+- Docs synced: README.md (new "stable gateway" explainer in the
+  Switcher/dashboard/IDE section, an "at a glance" row), ONBOARDING.md
+  (fresh real captures of `dyno serve`/`dyno connect goose`/`dyno dashboard`
+  output reflecting the new gateway line and port, new guidance in Steps 6,
+  8, 10, 11, and 12), and this entry.

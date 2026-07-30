@@ -19,7 +19,7 @@ import { startApiServer, API_PORT } from "./api.js";
 import { activateCandidate } from "./activate.js";
 import { runSetupWizard } from "./setup.js";
 import { getOrCreateLanToken, advertiseLan, discoverLan, saveRemoteConfig, loadRemoteConfig, clearRemoteConfig } from "./lan.js";
-import { checkResidue, cleanResidue } from "./agentops.js";
+import { checkResidue, cleanResidue, ensureApiDaemon, stopApiDaemonIfAutoStarted, pingApiServer } from "./agentops.js";
 
 function arg(flag: string): string | null {
   const i = process.argv.indexOf(flag);
@@ -79,7 +79,9 @@ async function cmdPull() {
 
 async function cmdServe() {
   if (has("--stop")) {
-    console.log(stopServer() ? "server stopped" : "no server running");
+    const stopped = stopServer();
+    stopApiDaemonIfAutoStarted();
+    console.log(stopped ? "server stopped" : "no server running");
     return;
   }
   const context = arg("--context") ? Number(arg("--context")) : undefined;
@@ -89,6 +91,8 @@ async function cmdServe() {
     const s = await startOllamaServer(ollamaTag, context ?? DEFAULT_CONTEXT);
     console.log(`ready: ${OLLAMA_BASE_URL} (backend: ollama, context ${s.context})`);
     console.log(`endpoints: OpenAI /v1/chat/completions | Anthropic /v1/messages`);
+    await ensureApiDaemon(API_PORT);
+    console.log(`stable gateway for Goose/Cline: http://127.0.0.1:${API_PORT}/v1 (never changes, even across model/backend switches)`);
     return;
   }
   const hw = scanHardware(MODELS_DIR);
@@ -103,6 +107,8 @@ async function cmdServe() {
   const s = await startServer(pick, hw, { context });
   console.log(`ready: http://127.0.0.1:${s.port} (pid ${s.pid}, context ${s.context})`);
   console.log(`endpoints: OpenAI /v1/chat/completions | Anthropic /v1/messages`);
+  await ensureApiDaemon(API_PORT);
+  console.log(`stable gateway for Goose/Cline: http://127.0.0.1:${API_PORT}/v1 (never changes, even across model/backend switches)`);
 }
 
 async function cmdDoctor() {
@@ -168,6 +174,15 @@ async function cmdDashboard() {
   const root = new URL("../../site/dashboard", import.meta.url).pathname;
   if (!existsSync(root)) throw new Error(`dashboard assets missing at ${root}`);
   const lan = has("--lan");
+  const alreadyUp = await pingApiServer(API_PORT);
+  if (alreadyUp && !lan) {
+    console.log(`dashboard: http://127.0.0.1:${API_PORT}`);
+    console.log("already running (auto-started with a model server, or from an earlier `dyno dashboard`) — nothing to start, just open the URL above.");
+    return;
+  }
+  if (alreadyUp && lan) {
+    throw new Error("a loopback-only dashboard is already running — run `dyno serve --stop` first, then `dyno dashboard --lan`.");
+  }
   const token = lan ? getOrCreateLanToken() : undefined;
   startApiServer(root, API_PORT, { lan, token });
   if (!lan) {
@@ -186,6 +201,17 @@ async function cmdDashboard() {
     });
   }
   await new Promise(() => {}); // keep the process alive
+}
+
+/**
+ * Hidden, undocumented command — the background process `ensureApiDaemon()`
+ * spawns so `dyno serve` can bring up the dashboard/API server (the stable
+ * gateway) without blocking. Not meant to be run by hand; not in --help.
+ */
+async function cmdApiDaemon() {
+  const root = new URL("../../site/dashboard", import.meta.url).pathname;
+  startApiServer(root, API_PORT, {});
+  await new Promise(() => {});
 }
 
 async function cmdRemote() {
@@ -350,6 +376,7 @@ async function main() {
     remote: cmdRemote,
     version: cmdVersion,
     clean: cmdClean,
+    _apidaemon: cmdApiDaemon,
   };
   if (!cmd || !table[cmd]) {
     console.log(HELP);

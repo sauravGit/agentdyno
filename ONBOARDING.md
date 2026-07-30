@@ -233,7 +233,13 @@ dyno serve qwen2.5-coder-3b
 starting Qwen2.5 Coder 3B Instruct Q4_K_M (comfortable, ctx 32768)...
 ready: http://127.0.0.1:8402 (pid 12345, context 32768)
 endpoints: OpenAI /v1/chat/completions | Anthropic /v1/messages
+stable gateway for Goose/Cline: http://127.0.0.1:8403/v1 (never changes, even across model/backend switches)
 ```
+
+That last line is a small background proxy `dyno serve` co-starts automatically
+(and stops together with `dyno serve --stop`) — it's what Step 8's `connect`
+configs point at instead of the raw model port, so switching models later
+never means reconfiguring Goose or Cline.
 
 **What to check:**
 ```sh
@@ -316,31 +322,39 @@ dyno connect goose
 
 **Expected output** (real captured run):
 ```
-verified: grade F on this machine (7/28/2026, 12:16:49 AM)
+WARNING: this model has not passed dyno doctor on this machine — config below is UNVERIFIED
 
-WARNING: doctor grade is below agent-ready; expect silent failures. Try a bigger/graded-A model.
-
-# Goose -> local Qwen2.5 Coder 3B Instruct
+# Goose -> local Qwen3 8B
 export GOOSE_PROVIDER="openai"
-export GOOSE_MODEL="qwen2.5-coder-3b"
-export OPENAI_HOST="http://127.0.0.1:8402"
+export GOOSE_MODEL="qwen3-8b"
+export OPENAI_HOST="http://127.0.0.1:8403"
 export OPENAI_BASE_PATH="v1/chat/completions"
 export OPENAI_API_KEY="magix-box-local"
-goose run --model qwen2.5-coder-3b
+goose run --model qwen3-8b
 # or: goose session
 
-# Guardrail: server context is 32768 tokens; long sessions will compact early.
-# local 3.1B-class models are weaker than frontier models. Goose's
+# Guardrail: server context is 21535 tokens; long sessions will compact early.
+# local 8.2B-class models are weaker than frontier models. Goose's
 # reliability tracks your `dyno doctor` grade directly — battle-tested: a
 # grade-F model here returned the tool call as text (no file written); a
 # grade-B model executed it correctly. Run doctor before trusting this.
+#
+# This points at AgentDyno's stable gateway, not the model directly: run
+# `dyno switch <other-model>` any time and these env vars keep working
+# unchanged — no need to re-export anything.
 ```
 
-**What to check:** notice the WARNING — it only appears because the grade is
-below B. Re-run this after switching to a graded-B+ model (Step 7's optional
-part) and the warning should disappear. If you have the real Goose CLI
-installed (`brew install block-goose-cli`), you can literally paste this
-output into your terminal and it will connect — that's exactly how this
+**What to check:** the `OPENAI_HOST` is port **8403** (AgentDyno's own
+dashboard/API server), not the raw model port (8402) — this is deliberate.
+`dyno serve` co-starts a small background proxy on 8403 alongside the model
+(and tears it down together on `dyno serve --stop`; it's never a standalone
+always-on service). Goose talks to that fixed address forever; switch models
+or even switch backends with `dyno switch`/`dyno serve --ollama <tag>` later
+and these exact env vars keep working, unchanged — the proxy always forwards
+to whatever's actually active, and rewrites the request's model field
+server-side so a stale value never breaks anything. If you have the real
+Goose CLI installed (`brew install block-goose-cli`), you can literally paste
+this output into your terminal and it will connect — that's exactly how this
 project verified it live (see BUILD_LOG.md D-025).
 
 **Also try:**
@@ -351,7 +365,14 @@ AgentDyno deliberately does not support Claude Code as a connect target —
 Anthropic has never publicly stated whether pointing it at a non-Anthropic
 backend is permitted. Goose and Cline are this project's two first-class,
 fully-open targets.
-Each prints a different, correct config for that specific tool.
+Each prints a different, correct config for that specific tool. Cline's
+config points at the same stable gateway, but pasting it into Cline's
+Settings UI is a manual, one-time step — Cline exposes no way for another
+extension to fill it in for you (verified directly against its installed
+package.json, not assumed). If you're using the VS Code extension (Step 12),
+run **AgentDyno: Connect Cline** from the Command Palette instead of copying
+by hand — it copies the values to your clipboard and opens Cline's settings
+panel for you.
 
 ---
 
@@ -395,11 +416,20 @@ dyno switch --activate
 dyno dashboard
 ```
 
-**Expected output:**
+**Expected output — if no model is currently being served:**
 ```
 dashboard: http://127.0.0.1:8403
 loopback only — not reachable from outside this machine. Ctrl-C to stop.
 ```
+
+**Expected output — if you already ran `dyno serve` earlier in this walkthrough:**
+```
+dashboard: http://127.0.0.1:8403
+already running (auto-started with a model server, or from an earlier `dyno dashboard`) — nothing to start, just open the URL above.
+```
+`dyno serve` co-starts this same dashboard/API server automatically (it's what
+Step 8's connect configs point at) — this command just detects that and opens
+the same URL rather than trying to start a second one.
 
 **What to check:** open `http://127.0.0.1:8403` in a browser. You should see:
 - A **// machine** panel matching your `scan` output
@@ -432,6 +462,7 @@ dyno serve --ollama qwen2.5-coder:3b
 starting ollama:qwen2.5-coder:3b (ctx 16384)...
 ready: http://127.0.0.1:11434 (backend: ollama, context 16384)
 endpoints: OpenAI /v1/chat/completions | Anthropic /v1/messages
+stable gateway for Goose/Cline: http://127.0.0.1:8403/v1 (never changes, even across model/backend switches)
 ```
 
 **Then run the exact same commands as before:**
@@ -441,6 +472,9 @@ dyno connect goose
 ```
 **Expected output:** identical shape to Step 7/8, just sourced from Ollama
 instead of our managed llama-server. `status` will show `backend: ollama`.
+Same gateway address as the llama-server backend, too — if you'd already
+connected Goose/Cline against a managed model and switch to this Ollama one
+(or back), nothing needs to change on the Goose/Cline side.
 
 **What to check:** `dyno serve --stop` should NOT stop your
 Ollama daemon (check with `ollama list` afterward — it should still respond).
@@ -467,7 +501,7 @@ cd vscode-extension
 npm install
 npm run build
 npx --yes @vscode/vsce package --no-dependencies --allow-missing-repository
-code --install-extension agentdyno-vscode-0.2.0.vsix
+code --install-extension agentdyno-vscode-0.3.0.vsix
 ```
 (If `code` isn't on your PATH: open the Command Palette in VS Code ->
 "Shell Command: Install 'code' command in PATH" once, or use the full path
@@ -477,7 +511,7 @@ to the bundled CLI, e.g. on macOS:
 **Expected output:**
 ```
 Installing extensions...
-Extension 'agentdyno-vscode-0.2.0.vsix' was successfully installed.
+Extension 'agentdyno-vscode-0.3.0.vsix' was successfully installed.
 ```
 
 **Verify it's really installed:**
@@ -486,7 +520,7 @@ code --list-extensions --show-versions | grep agentdyno
 ```
 **Expected output:**
 ```
-agentdyno.agentdyno-vscode@0.2.0
+agentdyno.agentdyno-vscode@0.3.0
 ```
 
 **Finish it yourself with 3 clicks** (a CLI can install the extension and
@@ -517,6 +551,15 @@ participant picker next to Copilot. With a model activated, try:
 
 All three call the same local dashboard API as the CLI — nothing about the
 answer is reimplemented for chat.
+
+**Try the guided Cline connect:** Command Palette -> **AgentDyno: Connect
+Cline** — copies the Base URL/API Key/Model ID to your clipboard and opens
+Cline's settings panel for you. Paste into the three fields, done. This is a
+one-time step: Cline exposes no way for another extension to fill its
+settings in automatically (checked directly against its own installed
+package.json), so this removes every step that *can* be removed rather than
+pretending to remove the one that can't. You won't need to repeat it after
+switching models later.
 
 **Uninstall when done** (optional):
 ```sh

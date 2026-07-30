@@ -256,6 +256,9 @@ function chatHandler(
           return;
         }
         stream.markdown(`**${target} connect config:**\n\n\`\`\`\n${result.text}\n\`\`\``);
+        if (target === "cline") {
+          stream.markdown(`\nOr run **AgentDyno: Connect Cline** from the Command Palette — it copies these values and opens Cline's settings panel for you.`);
+        }
       } catch (e) {
         stream.markdown(`Couldn't reach the dashboard: ${(e as Error).message}`);
       }
@@ -273,6 +276,46 @@ function chatHandler(
       stream.markdown("No model server is active. Try `/status`, `/doctor`, or `/connect goose|cline` once one is.");
     }
   };
+}
+
+/**
+ * The one setup step AgentDyno genuinely cannot automate: Cline exposes no
+ * VS Code configuration and no command to set its API provider fields
+ * programmatically (checked directly against its installed package.json —
+ * empty `contributes.configuration`, no `cline.setApiConfiguration`-style
+ * command). So this doesn't pretend to auto-fill Cline's settings; it
+ * removes every OTHER step instead: opens Cline's settings panel for you
+ * and puts the exact values on your clipboard, ready to paste. Do this
+ * once — the values point at AgentDyno's stable gateway, so switching
+ * models later (even switching backends) never requires repeating it.
+ */
+async function connectClineGuided(dashboardUrlDefault: string): Promise<void> {
+  const url = config().get<string>("dashboardUrl") ?? dashboardUrlDefault;
+  if (!(await pingDashboard(url))) {
+    vscode.window.showWarningMessage(
+      "AgentDyno dashboard isn't running yet. Start a model first (`dyno serve <model>`, or use the AgentDyno panel), then run this again."
+    );
+    return;
+  }
+  const status = await apiGet(`${url}/api/status`);
+  if (!status.server) {
+    vscode.window.showWarningMessage(
+      "No model is active yet. Run `dyno serve <model>` or activate one from the AgentDyno panel, then run this again."
+    );
+    return;
+  }
+  const baseUrl = `${url}/v1`;
+  const apiKey = "magix-box-local";
+  const modelId = status.server.modelId;
+  await vscode.env.clipboard.writeText(`Base URL: ${baseUrl}\nAPI Key: ${apiKey}\nModel ID: ${modelId}`);
+  try {
+    await vscode.commands.executeCommand("cline.settingsButtonClicked");
+  } catch {
+    // Cline isn't installed, or renamed its command — the clipboard copy and message below still carry the values.
+  }
+  vscode.window.showInformationMessage(
+    `Copied to clipboard. In Cline's Settings -> API Provider: "OpenAI Compatible", paste: Base URL ${baseUrl} | API Key ${apiKey} | Model ID ${modelId}. One-time — switching models later never requires redoing this.`
+  );
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -306,7 +349,8 @@ export function activate(context: vscode.ExtensionContext) {
         if (await pingDashboard(url)) break;
       }
       openWebview(url);
-    })
+    }),
+    vscode.commands.registerCommand("agentdyno.connectCline", () => connectClineGuided("http://127.0.0.1:8403"))
   );
 }
 

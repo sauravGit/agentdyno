@@ -249,6 +249,35 @@ from before the Goose/Cline pivot. Rather than fix the mislabeled file in place,
 captured screenshot of the real, live <span class="mono">dyno dashboard</span> was taken instead
 (<span class="mono">site/screenshots/dashboard-live.png</span>) and used in the video.</p>
 
+<h2>// the stable gateway — Goose/Cline configured once, never touched again</h2>
+<p>Real user complaint: after <span class="mono">dyno switch</span> to a different model, Cline's
+settings silently point at stale information and fixing it means manually re-editing Cline's Settings
+UI. Checked whether AgentDyno could auto-write Cline's config directly — verified, against Cline's own
+installed <span class="mono">package.json</span>, that it exposes zero settings via VS Code's config
+API and no command to set them programmatically; VS Code sandboxes each extension's storage by design,
+so there is no supported door in. Separately verified that llama-server ignores the "model" field in
+requests entirely (sent a deliberately wrong model name, got a normal response from the real model
+anyway) while Ollama does route on it.</p>
+<p>Considered and rejected a true always-on background service (launchd/systemd autostart) — real OS
+plumbing, a permanently-listening port whether or not the machine is in use, and a direct contradiction
+of this project's own "no accounts, no telemetry, no subscriptions" stance. Shipped instead: the
+existing dashboard/API server becomes a stable gateway (<span class="mono">127.0.0.1:8403/v1</span>)
+that Goose/Cline are configured against ONCE, co-started with <span class="mono">dyno serve</span> and
+torn down together with <span class="mono">dyno serve --stop</span> — never an independent daemon,
+nothing lingers once you stop working. The proxy force-rewrites the request's model field server-side
+to whatever's actually active, so switching models — or switching backends entirely, llama-server to
+Ollama — never requires touching Goose or Cline again. Caught and fixed a real regression while making
+this the default local path rather than just a LAN nicety: the proxy used to buffer the entire response
+before replying, which would have silently killed token-by-token streaming for every interactive chat
+request — switched to piping the response through and verified real SSE chunks arrive progressively.</p>
+<p>The one remaining manual step — pasting into Cline's Settings UI — cannot be automated away (see
+above), so a new VS Code command, <strong>AgentDyno: Connect Cline</strong>, copies the values to the
+clipboard and opens Cline's settings panel directly instead, verified against the actually-installed
+extension. Verified end to end on a real server: a request through the gateway with a deliberately
+wrong model field still reached the real model; <span class="mono">dyno dashboard</span> detects an
+already-running gateway instead of crashing on a port conflict; <span class="mono">dyno serve
+--stop</span> leaves no processes or pid files behind. 42/42 tests passing.</p>
+
 <h2>// deliverables map</h2>
 <table class="map">
 <tr><th>artifact</th><th>what it is</th></tr>

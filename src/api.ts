@@ -6,8 +6,9 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
+import { Readable } from "node:stream";
 import os from "node:os";
-import { MODELS_DIR, loadCatalog, resolveModel, ensureDirs } from "./catalog.js";
+import { MODELS_DIR, loadCatalog, resolveModel, ensureDirs, API_PORT } from "./catalog.js";
 import { DEFAULT_CONTEXT } from "./fit.js";
 import { scanHardware } from "./scan.js";
 import { activeBaseUrl, readState, requestModelFor, stopServer, health, BASE_URL } from "./serve.js";
@@ -20,7 +21,7 @@ import { rankCandidates, activateCandidate } from "./activate.js";
 import { installVscodeExtension, launchInNewTerminal, checkResidue, cleanResidue } from "./agentops.js";
 import { getOrCreateLanToken } from "./lan.js";
 
-export const API_PORT = 8403;
+export { API_PORT };
 
 interface Activation {
   inProgress: boolean;
@@ -292,24 +293,51 @@ export function createApiServer(dashboardRoot: string, options: ApiServerOptions
         return json(res, 200, { baseUrl: BASE_URL });
       }
 
-      // Inference proxy: the ONLY way inference requests should reach this
-      // machine from the network in LAN mode. The raw llama-server/Ollama
-      // port is never bound to the LAN directly (see lan.ts's header
-      // comment for why) — this authenticated route stands in for it.
+      // Inference proxy: in LAN mode, the ONLY way inference requests should
+      // reach this machine from the network (raw llama-server/Ollama ports
+      // are never bound to the LAN directly — see lan.ts's header comment).
+      // In default/local mode this is ALSO the stable gateway Goose/Cline
+      // are configured against: a fixed address (127.0.0.1:<API_PORT>/v1)
+      // that never changes across model or backend switches, unlike the raw
+      // backend port (8402 for llama-server, 11434 for Ollama). The "model"
+      // field in the request body is force-rewritten to whatever's actually
+      // active regardless of what the client sent, so a config pasted into
+      // Cline once never goes stale — llama-server ignores this field
+      // anyway, but Ollama routes on it, so getting it right here is what
+      // makes the guarantee hold for both backends.
       if (path.startsWith("/v1/")) {
         const s = readState();
         if (!s) return json(res, 409, { error: "no server running" });
         const target = `${activeBaseUrl(s)}${path}${url.search}`;
         const chunks: Buffer[] = [];
         for await (const c of req) chunks.push(c as Buffer);
+        let outBody: Buffer | undefined = chunks.length ? Buffer.concat(chunks) : undefined;
+        if (outBody && outBody.length) {
+          try {
+            const parsed = JSON.parse(outBody.toString("utf8"));
+            if (parsed && typeof parsed === "object" && "model" in parsed) {
+              parsed.model = requestModelFor(s);
+              outBody = Buffer.from(JSON.stringify(parsed));
+            }
+          } catch {
+            // not JSON (or malformed) — forward the raw bytes unchanged
+          }
+        }
         const upstream = await fetch(target, {
           method: req.method,
           headers: { "Content-Type": "application/json" },
-          body: chunks.length ? Buffer.concat(chunks) : undefined,
+          body: outBody as BodyInit | undefined,
         });
-        const body = Buffer.from(await upstream.arrayBuffer());
         res.writeHead(upstream.status, { "Content-Type": upstream.headers.get("content-type") ?? "application/json" });
-        return res.end(body);
+        // Stream the response through rather than buffering it — this proxy
+        // is now the default local path too, and buffering would silently
+        // kill token-by-token streaming for every interactive chat request.
+        if (upstream.body) {
+          Readable.fromWeb(upstream.body as import("node:stream/web").ReadableStream).pipe(res);
+        } else {
+          res.end();
+        }
+        return;
       }
 
       if (serveStatic(dashboardRoot, path, res)) return;

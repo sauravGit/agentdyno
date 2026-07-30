@@ -2,7 +2,7 @@
   "name": "agentdyno-vscode",
   "displayName": "AgentDyno",
   "description": "Thin wrapper: opens the AgentDyno local dashboard (scan/fit/switch/doctor/connect) inside VS Code. Requires the AgentDyno CLI (github.com/sauravGit/agentdyno) checked out on disk — this extension does not bundle it.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "agentdyno",
   "icon": "icon.png",
   "license": "Apache-2.0",
@@ -44,7 +44,8 @@
     },
     "commands": [
       { "command": "agentdyno.openDashboard", "title": "AgentDyno: Open Dashboard" },
-      { "command": "agentdyno.startServer", "title": "AgentDyno: Start Dashboard Server" }
+      { "command": "agentdyno.startServer", "title": "AgentDyno: Start Dashboard Server" },
+      { "command": "agentdyno.connectCline", "title": "AgentDyno: Connect Cline (copy settings + open Cline's panel)" }
     ],
     "configuration": {
       "title": "AgentDyno",

@@ -7,7 +7,8 @@
 // dropped per explicit scope changes; Goose and Cline are the sole
 // first-class citizens now, matching their own VS Code plugins too.
 
-import { activeBaseUrl, readState, requestModelFor } from "./serve.js";
+import { readState, requestModelFor } from "./serve.js";
+import { API_PORT } from "./catalog.js";
 import type { ServeState } from "./serve.js";
 import type { CatalogModel } from "./types.js";
 
@@ -18,13 +19,26 @@ function requireRunning() {
 }
 
 /**
- * The model identifier to put in agent configs and API request bodies.
- * - Ollama ROUTES on this field, so it must be the exact pulled tag
- *   (requestModelFor already returns that).
- * - llama-server IGNORES this field entirely, but printing the internal
- *   sentinel "local" (used only in probes.ts's own request bodies) into a
- *   user-facing config is confusing — use the real catalog id instead so
- *   what the user sees matches what they ran `dyno pull`/`dyno serve` with.
+ * The stable local gateway: a fixed address (this machine's dashboard/API
+ * server, co-started with `dyno serve` — see agentops.ts's ensureApiDaemon)
+ * that never changes across model or backend switches, unlike the raw
+ * backend port (8402 for llama-server, 11434 for Ollama). The proxy at
+ * /v1/* force-rewrites the request body's "model" field to whatever's
+ * actually active server-side, regardless of what the client sent — so
+ * Goose/Cline are configured against this address ONCE and never need
+ * touching again, even after `dyno switch` to a different model or a
+ * different backend entirely.
+ */
+function gatewayBaseUrl(): string {
+  return `http://127.0.0.1:${API_PORT}`;
+}
+
+/**
+ * The model identifier to PRINT in the one-time agent config (the actual
+ * routing correctness no longer depends on this value staying accurate —
+ * see gatewayBaseUrl's comment — but showing the real catalog id here,
+ * rather than an opaque placeholder, keeps the one-time setup legible: what
+ * you see is what you just ran `dyno pull`/`dyno serve` with).
  */
 function publicModelId(model: CatalogModel, state: ServeState): string {
   return state.backend === "ollama" ? requestModelFor(state) : model.id;
@@ -54,7 +68,7 @@ function publicModelId(model: CatalogModel, state: ServeState): string {
  * than repeating the stale, unreproduced GitHub issue.
  */
 export function connectGooseWith(model: CatalogModel, s: ServeState): string {
-  const baseUrl = activeBaseUrl(s);
+  const baseUrl = gatewayBaseUrl();
   const requestModel = publicModelId(model, s);
   return `# Goose -> local ${model.displayName}
 export GOOSE_PROVIDER="openai"
@@ -69,7 +83,11 @@ goose run --model ${requestModel}
 # local ${model.paramsB}B-class models are weaker than frontier models. Goose's
 # reliability tracks your \`dyno doctor\` grade directly — battle-tested: a
 # grade-F model here returned the tool call as text (no file written); a
-# grade-B model executed it correctly. Run doctor before trusting this.`;
+# grade-B model executed it correctly. Run doctor before trusting this.
+#
+# This points at AgentDyno's stable gateway, not the model directly: run
+# \`dyno switch <other-model>\` any time and these env vars keep working
+# unchanged — no need to re-export anything.`;
 }
 
 /**
@@ -84,7 +102,7 @@ goose run --model ${requestModel}
  * openai-compatible` doesn't pick up the local server, use the UI steps.
  */
 export function connectClineWith(model: CatalogModel, s: ServeState): string {
-  const baseUrl = activeBaseUrl(s);
+  const baseUrl = gatewayBaseUrl();
   const requestModel = publicModelId(model, s);
   return `# Cline -> local ${model.displayName}
 #
@@ -95,6 +113,11 @@ export function connectClineWith(model: CatalogModel, s: ServeState): string {
 #   3. Base URL: ${baseUrl}/v1
 #      API Key:  magix-box-local
 #      Model ID: ${requestModel}
+#
+# Do this ONCE. AgentDyno's gateway forwards to whichever model is actually
+# active and rewrites the model field server-side — \`dyno switch\` to a
+# different model (or a different backend entirely) later and Cline keeps
+# working with these exact settings, no revisit needed.
 #
 # Best-effort CLI (no documented --base-url flag as of writing; set the Base
 # URL once via the Settings UI above first, then this reuses that config):
@@ -131,7 +154,7 @@ export interface LaunchSpec {
 }
 
 export function launchSpecFor(target: AgentTarget, model: CatalogModel, s: ServeState): LaunchSpec {
-  const baseUrl = activeBaseUrl(s);
+  const baseUrl = gatewayBaseUrl();
   const requestModel = publicModelId(model, s);
   if (target === "goose") {
     return {
