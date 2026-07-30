@@ -13,12 +13,12 @@ drive tools before you wire [Goose](https://github.com/block/goose) or
 [Cline](https://cline.bot) to it. Local, free, Apache-2.0. No accounts, no
 telemetry, no paid tier.
 
-[**Watch the ~77s launch film**](site/video/launch-v2.mp4) · [ONBOARDING.md](ONBOARDING.md) (step-by-step, ~15 min) · [Jump to Install](#install)
+[**Watch the ~113s launch film**](site/video/launch-v3.mp4) · [ONBOARDING.md](ONBOARDING.md) (step-by-step, ~15 min) · [Jump to Install](#install)
 
 <p align="center">
-  <a href="site/video/launch-v2.mp4">
-    <img src="site/screenshots/launch-v2-poster.png" alt="Watch the AgentDyno launch film" width="640"><br>
-    <sub>▶ real narration, real captured output — click to play</sub>
+  <a href="site/video/launch-v3.mp4">
+    <img src="site/screenshots/launch-v3-poster.jpg" alt="Watch the AgentDyno launch film" width="640"><br>
+    <sub>▶ real narration + avatar, real captured output, real dashboard + VS Code — click to play</sub>
   </a>
 </p>
 

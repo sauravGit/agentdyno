@@ -65,8 +65,8 @@ report edits that never happen. Documented across Goose, OpenCode, Aider, Cline,
 
 <h2>// the proof (real output, one laptop, two models)</h2>
 <p>Measured on a MacBook Air M4, 16 GB. Both models fit comfortably. One is useless.</p>
-<div class="panel" style="padding:0;overflow:hidden"><video controls preload="metadata" poster="site/screenshots/launch-v2-poster.png"><source src="site/video/launch-v2.mp4" type="video/mp4"></video></div>
-<p class="lede" style="font-size:14px">Updated narrated cut (~77s, real ElevenLabs voice) — see the 2026-07-29 addendum below. The original silent capture is still at <a href="site/video/launch.mp4">site/video/launch.mp4</a>.</p>
+<div class="panel" style="padding:0;overflow:hidden"><video controls preload="metadata" poster="site/screenshots/launch-v3-poster.jpg"><source src="site/video/launch-v3.mp4" type="video/mp4"></video></div>
+<p class="lede" style="font-size:14px">Latest cut (~113s): a real HeyGen avatar delivers the open/close, real ElevenLabs narration over the CLI demo, a real dashboard screenshot, a VS Code chat-participant mockup, and Kie.ai-generated title/closing art — see the 2026-07-29 addendum below. Earlier cuts kept for reference: <a href="site/video/launch-v2.mp4">v2 (narrated, no avatar)</a> and <a href="site/video/launch.mp4">the original silent capture</a>.</p>
 <div class="two">
   <div class="panel"><span class="stamp f">F</span> &nbsp;<span class="mono">Qwen2.5-Coder-7B</span>
     <p style="font-size:14px">Fails P1: emits raw <span style="color:var(--fail)">&lt;function/&gt;</span> XML instead of a tool call. The agent loop never starts. <a href="site/certificates/qwen2.5-coder-7b.html">certificate</a></p></div>
@@ -219,14 +219,47 @@ silent cut — see the deliverables map below. Two other keys present in this pr
 "Unauthorized" — disclosed rather than silently skipped; no avatar or AI-generated imagery is in this
 video as a result.</p>
 
+<h2>// launch-v3.mp4 — HeyGen and Kie.ai, retried and working</h2>
+<p>Both keys were unauthorized when first tested (D-030). The user regenerated them and asked to
+retry — same account-status checks, both came back valid this time, with a twist: the two new
+key values had their <em>lengths swapped</em> relative to the old ones (HeyGen went from 32 to 54
+characters, Kie.ai from 54 to 32), which was cross-checked explicitly (each key tried against
+<em>both</em> services) to rule out a copy-paste field swap before trusting either — they were
+correctly assigned, just coincidentally inverted in length from the broken pair.</p>
+<p><strong>HeyGen</strong>: generated a real avatar video (<span class="mono">Annie_Business_Casual_Standing_Front_public</span>)
+reading the opening hook and closing call-to-action, driven by the project's own ElevenLabs audio
+(uploaded as an asset via <span class="mono">POST /v3/assets</span>, referenced by
+<span class="mono">audio_asset_id</span> in <span class="mono">POST /v3/videos</span> — verified
+empirically against HeyGen's own docs rather than trusting a single fetched summary). One real,
+disclosed limitation: the requested <span class="mono">background: {type: color}</span> parameter
+did not override this avatar's own baked-in studio footage — color-graded the clip afterward
+(slight darken + teal push) to tie it into the brand palette instead of fighting it.</p>
+<p><strong>Kie.ai</strong>: generated the dyno-gauge illustration used for the title and closing
+cards (<span class="mono">brand/hero-gauge.jpg</span>) via the 4o-image API, verified against the
+real quickstart doc fetched directly from <span class="mono">docs.kie.ai</span> rather than assumed.</p>
+<p>Building the fuller cut surfaced two more real, unplanned findings: an ffmpeg
+<span class="mono">zoompan</span> Ken-Burns clip that came out <strong>225 seconds</strong> instead
+of 3 — caused by an input option (<span class="mono">-t 3</span>) landing on the wrong
+<span class="mono">-i</span> because of ordering, which made a looped still image feed multiple
+frames into a filter that expects exactly one — fixed by reordering the flags, not by papering over
+the symptom. And a real, pre-existing bug this pass exposed while sourcing a "dashboard" screenshot:
+<span class="mono">site/screenshots/desktop.png</span> is actually a screenshot of the marketing
+landing page, mislabeled as the dashboard, and showing stale "Claude Code, OpenCode, or Aider" copy
+from before the Goose/Cline pivot. Rather than fix the mislabeled file in place, a genuine, freshly
+captured screenshot of the real, live <span class="mono">dyno dashboard</span> was taken instead
+(<span class="mono">site/screenshots/dashboard-live.png</span>) and used in the video.</p>
+
 <h2>// deliverables map</h2>
 <table class="map">
 <tr><th>artifact</th><th>what it is</th></tr>
 <tr><td><a href="site/index.html">site/index.html</a></td><td>Landing site — real numbers, <a href="site/screenshots/desktop.png">desktop</a> + <a href="site/screenshots/mobile.png">mobile</a> verified</td></tr>
 <tr><td><a href="site/dashboard/index.html">site/dashboard/</a></td><td>Local dashboard UI (serve via <span class="mono">dyno dashboard</span>)</td></tr>
 <tr><td><a href="vscode-extension/">vscode-extension/</a></td><td>VS Code extension shell + packaged .vsix</td></tr>
-<tr><td><a href="site/video/launch-v2.mp4">launch-v2.mp4</a></td><td>~77s narrated launch film (real ElevenLabs voice) — the F-vs-B story, updated for Goose/Cline + brew/npm install</td></tr>
-<tr><td><a href="site/video/launch.mp4">launch.mp4</a></td><td>Original 45s silent launch capture (2026-07-24) — superseded by launch-v2.mp4 above, kept for reference</td></tr>
+<tr><td><a href="site/video/launch-v3.mp4">launch-v3.mp4</a></td><td>~113s launch film — real HeyGen avatar (open/close), real ElevenLabs narration, real dashboard screenshot, VS Code chat-participant mockup, Kie.ai-generated title/closing art, Ken Burns motion throughout</td></tr>
+<tr><td><a href="site/video/launch-v2.mp4">launch-v2.mp4</a></td><td>~77s narrated cut (real ElevenLabs voice, no avatar) — superseded by launch-v3.mp4, kept for reference</td></tr>
+<tr><td><a href="site/video/launch.mp4">launch.mp4</a></td><td>Original 45s silent launch capture (2026-07-24) — superseded, kept for reference</td></tr>
+<tr><td><a href="brand/hero-gauge.jpg">hero-gauge.jpg</a></td><td>Kie.ai-generated dyno-gauge illustration used in launch-v3.mp4's title/closing cards</td></tr>
+<tr><td><a href="site/screenshots/dashboard-live.png">dashboard-live.png</a></td><td>Real, live screenshot of the actual <span class="mono">dyno dashboard</span> (site/screenshots/desktop.png is the marketing page, not the dashboard — see addendum)</td></tr>
 <tr><td><a href="site/video/walkthrough.mp4">walkthrough.mp4</a></td><td>Product walkthrough — full command flow (silent, predates the Goose/Cline-only pivot)</td></tr>
 <tr><td><a href="THESIS.md">THESIS.md</a></td><td>Product thesis + the falsified claim, kept visible with its correction</td></tr>
 <tr><td><a href="research/REPORT.md">REPORT.md</a></td><td>12-tool landscape, every claim sourced</td></tr>
