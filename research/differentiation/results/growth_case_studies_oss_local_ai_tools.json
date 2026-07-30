@@ -1,0 +1,65 @@
+{
+  "name": "Growth case studies of comparable OSS local-AI dev tools (Ollama, LM Studio, Continue.dev, Aider, oterm) + the HN launch-diffusion pattern",
+  "category": "community-mechanic",
+  "what_it_is": "Sourced growth tactics behind five comparable local-AI developer tools, plus a quantitative study of how Hacker News launches move GitHub stars for AI tools. The recurring, transferable mechanics are: (1) zero-config single-binary packaging that hides hardware detection + model download + inference (Ollama); (2) an OpenAI-compatible drop-in API so the entire existing tool ecosystem works with a one-line endpoint change (Ollama, LM Studio, oterm); (3) friction-removal / product polish with pre-download 'will this run on my machine' hardware estimates (LM Studio); (4) becoming the local on-ramp inside an already-popular editor extension (Continue.dev + Ollama); (5) self-published leaderboard + public dogfooding metric as the credibility engine (Aider); (6) MCP-client interop as a niche-but-real growth vector (oterm); and (7) launch timing on HN matters far more than the 'Show HN' tag.",
+  "real_precedent": [
+    {
+      "name": "Ollama",
+      "url": "https://techcrunch.com/2026/07/09/popular-open-source-ai-developer-tool-ollama-raises-65m-grows-to-nearly-9m-users/",
+      "note": "Created by ex-Docker-Desktop founders (Kitematic acquired by Docker). Core tactic: package model download + hardware detection + inference into a single binary that runs open-weight models in minutes. Second core tactic: ship an OpenAI-compatible REST API so any tool that speaks the OpenAI API points at local Ollama with a one-line base_url change; LangChain/LlamaIndex work unmodified. Result: ~176k GitHub stars, 8.9M monthly developers, in 85% of the Fortune 500, 67,000+ community integrations, with only 14 employees; raised $65M Series B (July 2026). OpenAI-compat blog: https://ollama.com/blog/openai-compatibility"
+    },
+    {
+      "name": "LM Studio",
+      "url": "https://www.sitepoint.com/local-llms-are-getting-easier-the-complete-guide-2026/",
+      "note": "GUI-first product for people who won't touch a CLI. Tactic: remove ALL friction -- install, search a HuggingFace-connected model browser, SEE estimated RAM requirements BEFORE downloading, automatic GPU detection, and a working chat in under five minutes; plus a built-in OpenAI-compatible API server. Positioned as 'the tool that made local LLMs feel like a proper desktop product.' [Adoption is described qualitatively in secondary reviews, not with hard numbers.]"
+    },
+    {
+      "name": "Continue.dev",
+      "url": "https://docs.continue.dev/",
+      "note": "Apache-2.0 open-source AI code assistant for VS Code, JetBrains, and Neovim, positioned as local-first middleware between the editor and any LLM backend. Growth tactic: be the local on-ramp for an existing popular editor by making Ollama the recommended local runtime (config.yaml points at http://localhost:11434). Philosophy framing ('amplify intent', warn against being a 'human clipboard') differentiates on developer-growth rather than pure automation. Raised ~$2.1M seed. Sources: https://www.sitepoint.com/continuedev-for-developers-the-complete-local-ai-coding-assistant-setup/"
+    },
+    {
+      "name": "Aider",
+      "url": "https://github.com/paul-gauthier/aider",
+      "note": "Apache-2.0, ~47.8k GitHub stars. Started April 2023 by Paul Gauthier (ex-Inktomi) as a terminal-first, git-integrated pair programmer -- filling the gap Copilot didn't (no new IDE required). Growth tactic: publish its OWN benchmark/leaderboard (polyglot: 225 Exercism exercises, cost-per-run reported) as the reference for practical model selection, and run a public dogfooding metric ('88% of new code in the last release written by Aider itself') as a credibility badge in the README. Leaderboard: https://aider.chat/docs/leaderboards/"
+    },
+    {
+      "name": "oterm",
+      "url": "https://github.com/ggozad/oterm/blob/main/README.md",
+      "note": "Terminal client for Ollama (~2,347 stars). Growth tactic for a small tool: broad interop -- full Model Context Protocol (MCP) integration (tools, prompts, sampling), persistent SQLite chat sessions, custom commands wired to tools, and multi-provider support via pydantic-ai (OpenAI/Anthropic/Groq/Mistral/vLLM/LM Studio/llama.cpp/OpenRouter/etc). Shows MCP-client interop and 'no separate server to run' as adoption levers in the terminal niche."
+    },
+    {
+      "name": "Launch-Day Diffusion (HN -> GitHub stars study)",
+      "url": "https://arxiv.org/abs/2511.04453",
+      "note": "Empirical study of 138 AI-tool repository launches (2024-2025). Findings: avg +121 stars within 24h of HN exposure, +189 within 48h, +289 within one week. Posting TIMING is a key ML-identified predictor ('launching at optimal hours can mean hundreds of additional stars'). The 'Show HN' tag showed NO statistical advantage after controlling for other factors."
+    }
+  ],
+  "evidence_of_impact": [
+    "Ollama: ~176k GitHub stars, 8.9M monthly developers, 85% of the Fortune 500, 67,000+ community integrations, 14 employees, $65M Series B (July 2026). Source: https://techcrunch.com/2026/07/09/popular-open-source-ai-developer-tool-ollama-raises-65m-grows-to-nearly-9m-users/",
+    "Ollama OpenAI-compatibility is documented by Ollama itself as enabling existing OpenAI-API tooling to run locally with minimal change. Source: https://ollama.com/blog/openai-compatibility",
+    "Aider: ~47.8k GitHub stars, Apache-2.0, README ships a 'singularity' badge stating 88% of new code in the last release was written by Aider itself. Source: https://github.com/paul-gauthier/aider",
+    "oterm: 2,347 GitHub stars with full MCP integration and multi-provider support. Source: https://github.com/ggozad/oterm/blob/main/README.md [star count via awesome.ecosyste.ms listing, secondary]",
+    "HN launch effect quantified: +121/+189/+289 stars at 24h/48h/1wk across 138 AI-tool launches; timing predictive; 'Show HN' tag not significant after controls. Source: https://arxiv.org/abs/2511.04453",
+    "[uncertain] LM Studio and Continue.dev adoption are described qualitatively in secondary reviews/blogs (SitePoint, docs) rather than with independently verified user/star counts; Continue's ~$2.1M seed and LM Studio's 'under five minutes to a working chat' come from secondary sources."
+  ],
+  "applicability_to_agentdyno": "1) LEAN INTO THE GATEWAY AS THE GROWTH SURFACE (Ollama's #1 tactic). AgentDyno already ships a stable OpenAI-compatible gateway at 127.0.0.1:8403/v1 -- market it exactly as Ollama markets OpenAI-compat: 'point Goose, Cline, Continue, Aider, LangChain, or any OpenAI-API tool at 127.0.0.1:8403/v1 with a one-line change and get a verified-to-actually-tool-call local backend.' The differentiator vs raw Ollama is that AgentDyno's gateway is pre-verified (5-probe exam passed) and hardware-fit-checked. 2) COPY LM STUDIO'S PRE-DOWNLOAD 'WILL THIS RUN' UX. `dyno scan`/`dyno fit` already compute hardware fit -- surface it like LM Studio's RAM-estimate-before-download: before `dyno pull`, show 'this model fits / will swap / won't run' plus expected tokens/sec. This is a concrete, screenshottable moment for HN/Reddit. 3) COPY AIDER'S SELF-PUBLISHED LEADERBOARD + DOGFOODING BADGE. Publish a hardware-conditioned leaderboard of which local models pass the tool-calling exam on which GPU/RAM tier, and add a public 'verified by dyno doctor on N machines' style credibility metric. 4) BE THE LOCAL ON-RAMP INSIDE A POPULAR EXTENSION (Continue's tactic). AgentDyno already has a VS Code extension + chat participant and Goose/Cline connect targets -- position `dyno connect`/`dyno switch` as the one-click 'make local models actually work in your existing agent' layer, and get listed in Goose/Cline/Continue docs the way Ollama got listed everywhere. 5) MCP INTEROP (oterm's niche lever): expose the exam/gateway as an MCP-compatible endpoint so agent frameworks discover it. 6) LAUNCH MECHANICS (HN study): time the HN 'Show HN' for AgentDyno for optimal hours; do not over-invest in the 'Show HN' framing itself -- invest in the demo GIF (the `dyno fit` fit-check + a model failing then passing the tool-calling exam) since that is the shareable artifact.",
+  "build_effort": "Mostly small-to-medium and mostly positioning, because AgentDyno already has the required primitives. (a) Marketing the 8403/v1 gateway as a drop-in and getting listed in Goose/Cline/Continue docs = small (docs + outreach). (b) Pre-download 'will this run' fit banner before `dyno pull` = small-to-medium (wiring existing `dyno fit` output into the pull flow + UI). (c) Self-published hardware-conditioned leaderboard = medium (results schema + opt-in telemetry or community submissions + a static site; privacy design needed). (d) MCP endpoint = medium (implement an MCP server surface over the exam/gateway). (e) Launch-timing/demo-GIF = small (content). Highest leverage per effort: (a) + (b) + demo GIF first.",
+  "risk_or_caveat": "1) Ollama is the 800-lb gorilla and AgentDyno's gateway sits ON TOP of Ollama/llama-server -- if the pitch is just 'OpenAI-compatible local endpoint', users will ask 'why not just use Ollama?'. The pitch MUST foreground the verification/fit gate (the thing Ollama does NOT do), or the differentiation collapses. 2) A community leaderboard needs data; opt-in telemetry raises privacy concerns for a local-first, privacy-motivated audience -- botch the consent UX and it backfires (this exact audience chose local for privacy). 3) LM Studio/Continue adoption evidence here is secondary and qualitative; do not build the strategy on unverified adoption numbers. 4) The HN launch-diffusion numbers (+121 stars/24h) are averages across 138 tools with high variance -- a single HN post is not a growth strategy, and the study explicitly deflates the 'Show HN tag' magic. 5) Getting listed in Goose/Cline/Continue docs depends on those maintainers; it is outreach-gated, not something AgentDyno controls unilaterally. 6) A hardware-conditioned leaderboard invites gaming and reproducibility disputes (users on different drivers/quant get different results) -- needs a pinned methodology or it erodes trust.",
+  "sources": [
+    "https://techcrunch.com/2026/07/09/popular-open-source-ai-developer-tool-ollama-raises-65m-grows-to-nearly-9m-users/",
+    "https://ollama.com/blog/openai-compatibility",
+    "https://en.wikipedia.org/wiki/Ollama",
+    "https://docs.langchain.com/oss/python/integrations/providers/ollama",
+    "https://www.sitepoint.com/local-llms-are-getting-easier-the-complete-guide-2026/",
+    "https://www.sitepoint.com/continuedev-for-developers-the-complete-local-ai-coding-assistant-setup/",
+    "https://docs.continue.dev/",
+    "https://github.com/paul-gauthier/aider",
+    "https://aider.chat/docs/leaderboards/",
+    "https://github.com/ggozad/oterm/blob/main/README.md",
+    "https://awesome.ecosyste.ms/projects/github.com/ggozad/oterm",
+    "https://arxiv.org/abs/2511.04453"
+  ],
+  "uncertain": [
+    "evidence_of_impact"
+  ]
+}

@@ -1037,3 +1037,67 @@ Format: each entry = date, decision/question, answer, why, evidence.
   (fresh real captures of `dyno serve`/`dyno connect goose`/`dyno dashboard`
   output reflecting the new gateway line and port, new guidance in Steps 6,
   8, 10, 11, and 12), and this entry.
+
+### D-033: Two real bugs found via live smoke-testing; differentiation research complete
+- User reported "lots of bugs" in the current version without specifics; ran
+  a live smoke-test pass across core commands rather than guess, and found
+  two real, reproducible ones — both fixed and verified, not just patched
+  blind.
+- **Bug 1 — `max-ctx: 0` for every `gpu+cpu split` (partial-offload) and
+  `won't-fit` model in `dyno fit`'s table.** Root cause: `fitQuant()`
+  computed `maxComfortableContext` against `budget = gpu > 0 ? gpu : ram` —
+  the GPU-only budget — regardless of which mode was actually determined.
+  For partial-offload models, weights already exceed the GPU budget alone
+  (that's the exact condition that put them in partial-offload), so `room`
+  went negative unconditionally and the function silently returned 0.
+  Reproduced directly: Devstral Small (14.3GB weights, 11.2GiB GPU budget,
+  8.6GiB RAM budget) — checking against GPU-only (11.2GiB) always yields a
+  negative room; checking against gpu+ram (19.8GiB, the actually-available
+  pool for that mode) yields a real, positive context. Fixed by matching the
+  budget to the mode: `ram` for cpu-only, `gpu + ram` for partial-offload,
+  `gpu` otherwise. Not just a display bug — `dyno serve <partial-offload
+  model>` without an explicit `--context` was silently falling back to a
+  flat 4096-token floor (serve.ts's existing safety floor) instead of the
+  real comfortable context, for every model in this mode. New regression
+  test added (existing "partial-offload reports a sane layer split" test
+  only checked `mode`, never `maxComfortableContext` — the actual gap that
+  let this ship unnoticed).
+- **Bug 2 — real race condition in the stable-gateway daemon (D-032), found
+  by re-testing that exact feature under a more adversarial sequence.**
+  `ensureApiDaemon()` spawned the background `_apidaemon` child and returned
+  immediately without confirming it was actually listening. Running
+  `dyno dashboard --lan` immediately after `dyno serve` printed "ready" hit
+  a real window where the daemon hadn't finished binding yet — its own
+  `pingApiServer` check correctly saw nothing, and it proceeded to start a
+  SECOND server. Genuinely surprising follow-on finding: on this OS, binding
+  0.0.0.0:8403 while another process already holds 127.0.0.1:8403 did NOT
+  throw EADDRINUSE — both silently stayed bound at once (confirmed via
+  `lsof -i :8403` showing two live listeners, one per process). Fixed at the
+  root: `ensureApiDaemon` now polls `pingApiServer` (up to 3s) after
+  spawning and only returns once the daemon is confirmed live, closing the
+  window entirely. Also added a `server.on("error", ...)` handler to
+  `startApiServer` as defense-in-depth for the unrelated, ordinary case of
+  a genuinely conflicting process — there was no error listener at all
+  before, so a real EADDRINUSE would have crashed with a raw Node stack
+  trace instead of a clean message. Re-ran the exact failing sequence after
+  the fix: correctly rejected with "a loopback-only dashboard is already
+  running" instead of double-binding; confirmed via `lsof` only one process
+  ever holds the port afterward.
+- Both fixes verified live (not just re-reasoned about) and via 43/43 tests
+  passing (up from 42 — new partial-offload regression test added).
+- Separately: completed the differentiation research requested earlier
+  (`/research-deep`, 8 angles, 4 parallel agents — one background-agent
+  batch hit a mid-run API session limit and was resumed via SendMessage
+  once it cleared, per this environment's own resume mechanism, rather than
+  restarted from scratch). Full synthesis in
+  `research/differentiation/REPORT.md`; raw per-angle findings, each with
+  fetched sources and explicit `[uncertain]` flags where evidence wasn't
+  independently verifiable, in `research/differentiation/results/*.json`.
+  Top recommendation: a self-published Aider-style leaderboard (smallest
+  effort, reuses existing `dyno doctor`/`fit` output), a grammar-constrained
+  "fixer" mode that can turn some real F-grade models into usable ones by
+  construction (most novel technical claim, no competitor offers this), and
+  an opt-in crowdsourced verified-compatibility database as the longer-term
+  compounding moat (structurally hardest thing for a pure calculator like
+  llmfit to replicate quickly). None of these are built yet — this is
+  research and a prioritized recommendation, not a shipped feature.

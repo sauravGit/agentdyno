@@ -1,0 +1,64 @@
+{
+  "name": "Existing agentic-coding benchmark standards (SWE-bench / SWE-bench Verified, Terminal-Bench, BigCodeBench, tau-bench, Aider polyglot)",
+  "category": "benchmark-standard",
+  "what_it_is": "A survey of the major public benchmarks/harnesses for evaluating coding and tool-calling agents, assessed for whether AgentDyno's fast 5-probe local tool-calling exam could reference, align with, or interoperate with any of them for legitimacy. The consistent finding: every established standard is heavyweight and cloud/Docker-oriented (per-repo or per-task containerized environments, hundreds of tasks, hosted-frontier-model API keys, expensive multi-hour full runs). None of them is a laptop-local, single-model, seconds-to-minutes smoke test of whether THIS local model on THIS hardware can actually do reliable tool calling. That gap is itself a real, defensible positioning finding for AgentDyno. The two closest philosophical anchors to reuse are (1) Aider's polyglot leaderboard model (edit-format reliability + cost-per-run reported, self-published leaderboard as credibility engine) and (2) tau-bench / BigCodeBench's tool-agent-user / diverse-function-call methodology, which most resembles what AgentDyno's probes exercise.",
+  "real_precedent": [
+    {
+      "name": "SWE-bench Verified",
+      "url": "https://openai.com/index/introducing-swe-bench-verified/",
+      "note": "500 human-annotated samples curated by 93 developers (each sample triple-reviewed), released by OpenAI Aug 2024 as a cleaned subset of SWE-bench. OpenAI co-developed a new evaluation harness using containerized Docker environments with pinned dependencies. GPT-4o resolves 33.2%. This is the de-facto industry standard for 'can an agent resolve a real GitHub issue', but requires a Docker environment per repository and a capable (usually cloud) model."
+    },
+    {
+      "name": "SWE-bench (base) + harness",
+      "url": "https://github.com/swe-bench/SWE-bench",
+      "note": "MIT-licensed dataset + harness.run_evaluation module; real GitHub issues + fix PRs + test patches. Reusable by third parties, but the unit of evaluation is a full repo-level Docker build per instance, which is far too heavy for a laptop-local fit tool."
+    },
+    {
+      "name": "tau-bench (Sierra Research)",
+      "url": "https://github.com/sierra-research/tau-bench",
+      "note": "Tool-Agent-User benchmark: retail (115 tasks) + airline (50 tasks) domains where an agent must call domain API tools, follow policy, and converse with an LLM-simulated user. Runs locally via Python but requires provider API keys (OpenAI/Anthropic/Google/Mistral/AnyScale) and is 'computationally expensive'. Reports pass^1..pass^4. Best on the official board is Claude 3.5 Sonnet (retail 69.2%, airline 46.0%). This is the closest methodology to AgentDyno's tool-calling probes."
+    },
+    {
+      "name": "Terminal-Bench (Stanford + Laude Institute)",
+      "url": "https://www.tbench.ai/",
+      "note": "Terminal-Bench 2.0 = 89 curated hard tasks across 16 categories (SWE, security, scientific computing, data science, debugging, games, sysadmin), each with a unique Docker environment, human-written solution, and verification scripts run in the agent's Docker container. End-to-end terminal workflows, not isolated functions. Heavyweight per-task Docker. Paper arXiv:2601.11868."
+    },
+    {
+      "name": "BigCodeBench (BigCode Project)",
+      "url": "https://huggingface.co/papers/2406.15877",
+      "note": "1,140 fine-grained Python tasks requiring the LLM to invoke diverse function calls as tools drawn from 139 libraries across 7 domains; ~5.6 test cases/task at 99% branch coverage. Two variants (Complete, Instruct). Best of 60 evaluated LLMs reaches ~60% vs 97% human. Open dataset on Hugging Face with leaderboard + harness. 'Function calls as tools' framing is directly relevant to AgentDyno's tool-calling exam, though it is code-completion-shaped, not agentic-loop-shaped."
+    },
+    {
+      "name": "Aider polyglot leaderboard / benchmark harness",
+      "url": "https://aider.chat/docs/leaderboards/",
+      "note": "225 hardest Exercism exercises across C++, Go, Java, JavaScript, Python, Rust. Model must emit changes in a structured edit format (diff / diff-fenced / whole / architect) and gets a second attempt with failing-test output; measures both synthesis and reliable file-editing / instruction-following. Reports cost-per-run alongside accuracy. Aider itself is Apache-2.0 (~47.8k stars) and uses its self-published leaderboard as its primary credibility engine. This is the single best model for AgentDyno to imitate: a self-run, self-published, cheap-to-reproduce leaderboard framed for 'which model should I actually pick'."
+    }
+  ],
+  "evidence_of_impact": [
+    "SWE-bench Verified was curated by 93 software developers with triple annotation and OpenAI collaborated with the SWE-bench authors on a Docker-based harness; it is now the reference agentic-coding benchmark cited across vendors. Source: https://openai.com/index/introducing-swe-bench-verified/",
+    "BigCodeBench evaluated 60 LLMs and reports a hard human/LLM gap (up to ~60% LLM vs 97% human), and is hosted with a public leaderboard on Hugging Face, evidencing broad reuse as a standard. Source: https://huggingface.co/papers/2406.15877",
+    "tau-bench's official leaderboard is actively maintained (Claude 3.5 Sonnet retail 69.2% / airline 46.0%) and the repo explicitly invites issues/PRs and ships historical trajectories for reproducibility, evidencing third-party reuse. Source: https://github.com/sierra-research/tau-bench/blob/main/README.md",
+    "Terminal-Bench is described as a joint Stanford / Laude Institute project positioned as a gold-standard terminal-agent evaluation, with 2.0 comprising 89 tasks across 16 categories. Source: https://www.tbench.ai/ ; paper https://arxiv.org/abs/2601.11868",
+    "Aider (Apache-2.0, ~47.8k GitHub stars) drove adoption in part by publishing its own leaderboard as the reference for practical model selection, calibrated so top coding LLMs land in a 5-50% band. Source: https://aider.chat/docs/leaderboards/edit.html and https://github.com/paul-gauthier/aider"
+  ],
+  "applicability_to_agentdyno": "Do NOT try to reproduce SWE-bench Verified / Terminal-Bench (per-repo/per-task Docker, hundreds of tasks, frontier-model API keys) inside a laptop-local tool -- that is the gap, and naming it is the positioning. Instead: (1) COPY THE AIDER MODEL. AgentDyno should publish its own self-run leaderboard: which local models pass the 5-probe tool-calling exam, at what pass@1, on what hardware tier (tie it to `dyno scan`/`dyno fit` output). Report a cost/speed axis (tokens/sec, VRAM headroom) the way Aider reports $/run -- Aider proved a self-published leaderboard is a credibility engine, and no one publishes a hardware-conditioned local-model tool-calling board. (2) BORROW METHODOLOGY VOCABULARY FROM tau-bench + BigCodeBench for legitimacy: frame the 5 probes explicitly as 'tool-agent-user' style (agent must select the right tool, emit well-formed arguments, and follow a policy) and cite 'diverse function calls as tools' (BigCodeBench). This lets AgentDyno's exam borrow the credibility of named standards without their weight. (3) INTEROP HOOK: AgentDyno already exposes a stable OpenAI-compatible gateway at 127.0.0.1:8403/v1 and connects to Goose/Cline -- it could offer an optional `dyno bench --harness aider-polyglot` mode that points the Aider harness (or a trimmed subset) at the local gateway, giving users one real standardized score on top of the fast 5-probe smoke test. Aider's harness and dataset are Apache-2.0-compatible to reference; tau-bench and SWE-bench are permissively licensed (SWE-bench MIT). (4) Explicitly document the tiering: 5-probe exam = seconds-level 'will tool calling even work here' gate; optional polyglot/BigCodeBench subset = minutes-level depth. That mirrors how Terminal-Bench splits easy/medium/hard.",
+  "build_effort": "small-to-medium. (a) The 'publish our own leaderboard' tactic is small: AgentDyno already computes the data in `dyno fit`/`doctor`; it needs a results schema + a static leaderboard page (like aider.chat/docs/leaderboards). (b) Reframing the 5 probes in tau-bench/BigCodeBench vocabulary is documentation-only (small). (c) The `dyno bench --harness aider-polyglot` interop is medium: it means vendoring or shelling out to an external harness, pinning language toolchains, and pointing it at the 8403/v1 gateway -- real integration + CI cost, and the polyglot set needs 6 language runtimes present. Recommend shipping (a)+(b) first and treating (c) as opt-in.",
+  "risk_or_caveat": "1) Reproducing even a SUBSET of a standard benchmark on a laptop invites unfavorable comparison: local 7-13B models will score badly on polyglot/SWE-bench-style tasks, and a low number next to a famous benchmark name can read as 'local models are useless' rather than 'AgentDyno verified tool-calling works'. Keep the headline metric AgentDyno's own fast pass/fail exam, not the borrowed benchmark. 2) Benchmark contamination / staleness: these datasets leak into training sets over time, so a passing score on a public set is weak evidence of real capability -- AgentDyno's value is the fit/verification gate, not another leaderboard, and over-indexing on leaderboards dilutes that. 3) Harness drift: Aider/tau-bench evolve; a vendored `--harness` mode is ongoing maintenance and can silently break. 4) Legitimacy-by-association can backfire if maintainers of those benchmarks object to a loose 'aligned with SWE-bench' claim -- only claim interop that is literally true (points our gateway at their harness), never claim endorsement.",
+  "sources": [
+    "https://openai.com/index/introducing-swe-bench-verified/",
+    "https://github.com/swe-bench/SWE-bench",
+    "https://www.swebench.com/verified.html",
+    "https://github.com/sierra-research/tau-bench/blob/main/README.md",
+    "https://github.com/sierra-research/tau-bench",
+    "https://www.tbench.ai/",
+    "https://arxiv.org/abs/2601.11868",
+    "https://huggingface.co/papers/2406.15877",
+    "https://arxiv.org/abs/2406.15877",
+    "https://aider.chat/docs/leaderboards/",
+    "https://aider.chat/docs/leaderboards/edit.html",
+    "https://github.com/paul-gauthier/aider"
+  ],
+  "uncertain": [
+    "evidence_of_impact"
+  ]
+}

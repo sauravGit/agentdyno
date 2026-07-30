@@ -1,0 +1,28 @@
+topic: agentdyno-differentiation
+description: >
+  Field definitions for researching concrete, evidence-backed opportunities to make
+  AgentDyno (a local-model hardware-fit + agentic tool-calling verification bench,
+  Apache-2.0, Goose/Cline-focused) a genuine differentiator rather than "another
+  fit calculator like llmfit" — technical features, ecosystem hooks, and community
+  adoption mechanics, each grounded in a real, fetched precedent.
+fields:
+  - name: name
+    description: Name of the researched precedent, technique, or mechanic
+  - name: category
+    description: One of technical-feature, ecosystem-hook, community-mechanic, benchmark-standard
+  - name: what_it_is
+    description: Concrete description of the precedent/technique, in its own original context
+  - name: real_precedent
+    description: Named real project/product/paper that actually does this, with a fetched URL — no invented examples
+  - name: evidence_of_impact
+    description: Sourced evidence this precedent actually drove adoption/trust/differentiation (stars, users, citations, quotes) — label [uncertain] if not independently verifiable
+  - name: applicability_to_agentdyno
+    description: Concrete, specific way this could be adapted for AgentDyno given its actual current architecture (dyno scan/fit/doctor/connect/switch, llama-server + Ollama backends, Goose/Cline targets, VS Code extension + chat participant, stable local gateway) — not generic
+  - name: build_effort
+    description: Rough honest estimate (small/medium/large) of engineering effort to build this in AgentDyno's existing codebase, with what it would require
+  - name: risk_or_caveat
+    description: Real reasons this might NOT work well for AgentDyno or might backfire, stated plainly
+  - name: sources
+    description: List of URLs actually fetched/consulted
+  - name: uncertain
+    description: Array of field names whose values are uncertain or inferred rather than directly verified

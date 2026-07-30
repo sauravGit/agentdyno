@@ -321,6 +321,16 @@ export async function ensureApiDaemon(port: number): Promise<void> {
   });
   child.unref();
   writeFileSync(API_DAEMON_PID_FILE, JSON.stringify({ pid: child.pid, autoStarted: true }));
+  // Wait for it to actually be listening before returning — found via a real
+  // race: `dyno serve` used to return as soon as the child was spawned, so a
+  // command run immediately after (e.g. `dyno dashboard --lan`) could still
+  // see nothing on the port and start its OWN server, double-binding 8403
+  // (confirmed live: two processes, one on 127.0.0.1 and one on 0.0.0.0,
+  // both happily bound at once — not the EADDRINUSE crash you'd expect).
+  for (let i = 0; i < 20; i++) {
+    if (await pingApiServer(port, 300)) return;
+    await new Promise((r) => setTimeout(r, 150));
+  }
 }
 
 /** Stops the API daemon ONLY if this machine's `dyno serve` auto-started it — never touches a dashboard the user launched themselves. */

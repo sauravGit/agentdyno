@@ -1,0 +1,85 @@
+topic: agentdyno-differentiation
+description: >
+  What would make AgentDyno feel like a category-defining tool rather than
+  "another fit calculator like llmfit" — researching real precedents for
+  technical features, ecosystem hooks, and community-adoption mechanics that
+  could differentiate it and drive community adoption. Every claim must trace
+  to a real, fetched URL; label inferences as [uncertain] rather than invent.
+execution:
+  output_dir: ./results
+  batch_size: 8
+  items_per_agent: 2
+items:
+  - name: Crowdsourced verified-compatibility databases
+    category: community-mechanic
+    description: >
+      Precedents like PassMark, Geekbench Browser, WebGL Report, UserBenchmark,
+      "Can You Run It" — public, crowdsourced databases of verified hardware/
+      software compatibility results. Investigate how they structure submissions,
+      whether opt-in anonymous result-sharing exists in any similar dev-tool
+      context (e.g., Ollama, llama.cpp discussions), and whether a "verified
+      model+hardware+agent combos, submitted by real users" public database is
+      a real, buildable differentiator for AgentDyno's doctor exam results.
+  - name: Grammar-constrained / structured-output decoding for guaranteed tool calls
+    category: technical-feature
+    description: >
+      llama.cpp GBNF grammars, OpenAI/vLLM "response_format": {"type":"json_schema"},
+      guided decoding (Outlines, XGrammar, llama-cpp-python grammar support).
+      Investigate whether forcing grammar-constrained decoding could take a model
+      that currently FAILS AgentDyno's tool-call probes (P1-P3) and make it PASS
+      by construction — i.e., whether AgentDyno could become an active "fixer"
+      of low grades, not just a passive grader. Real technical feasibility,
+      current llama-server support status, and known limitations.
+  - name: Existing agentic-coding benchmark standards
+    category: benchmark-standard
+    description: >
+      SWE-bench, SWE-bench Verified, Terminal-Bench, BigCodeBench, Tau-bench,
+      Aider's own leaderboard/benchmark harness. Investigate whether any of
+      these publish a reusable methodology or dataset AgentDyno's 5-probe exam
+      could reference, align with, or interoperate with for legitimacy — or
+      whether they're all too heavyweight/cloud-oriented for a laptop-local tool,
+      which would itself be a real finding (a gap AgentDyno fills).
+  - name: Growth case studies of comparable open-source local-AI dev tools
+    category: community-mechanic
+    description: >
+      Ollama, LM Studio, Continue.dev, Aider, oterm — investigate SPECIFIC,
+      sourced tactics (not vibes) that drove their GitHub star growth or
+      community size: launch strategy, HN/Reddit reception, key integrations,
+      content formats, viral moments. Cite real posts/threads/changelogs.
+  - name: Model-card / ecosystem trust badges
+    category: ecosystem-hook
+    description: >
+      Hugging Face model card metadata conventions, Open LLM Leaderboard badges,
+      "quantized by" attribution conventions on bartowski/unsloth GGUF repos,
+      any existing "verified for tool-calling" or "agent-ready" badge convention
+      in the wild. Investigate whether AgentDyno could inject a real, portable
+      "AgentDyno-verified" badge/certificate (it already generates HTML
+      certificates) into Hugging Face model cards or GGUF repo READMEs as a
+      distribution/visibility mechanic.
+  - name: Apple Silicon / MLX-native and speculative decoding performance techniques
+    category: technical-feature
+    description: >
+      Apple's MLX framework and mlx-lm, speculative decoding (draft models),
+      llama.cpp's own speculative decoding support, batched/continuous batching.
+      Investigate real, current (2026) capability and adoption of these for
+      Apple Silicon specifically, and whether AgentDyno adding an MLX backend
+      (alongside llama-server/Ollama) or speculative decoding support would be
+      a genuine, differentiated performance/capability win versus effort.
+  - name: CI-based regression testing patterns for LLM/agent evaluation
+    category: technical-feature
+    description: >
+      promptfoo, LangSmith evals, garak, DeepEval, and any GitHub Action that
+      re-runs an eval suite on schedule or on model-file change. Investigate
+      whether a "AgentDyno CI" (re-run the doctor exam automatically when a
+      model file, llama.cpp version, or Ollama version changes, catching
+      regressions) has real precedent elsewhere and what such an action
+      would concretely need to look like.
+  - name: Leaderboard / bake-off content formats that drove community engagement
+    category: community-mechanic
+    description: >
+      LMSYS Chatbot Arena, dubesor's personal LLM benchmark, Aider's leaderboard,
+      r/LocalLLaMA recurring benchmark threads. Investigate what specifically
+      made these formats shareable/recurring (not one-time utility) — cadence,
+      format, submission mechanics — and whether a recurring "grade-A models
+      this week" or "F vs B tournament" content format is realistic for
+      AgentDyno to sustain given it requires real hardware to run each exam.

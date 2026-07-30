@@ -352,6 +352,17 @@ export function createApiServer(dashboardRoot: string, options: ApiServerOptions
 export function startApiServer(dashboardRoot: string, port: number = API_PORT, options: ApiServerOptions = {}) {
   ensureDirs();
   const server = createApiServer(dashboardRoot, options);
+  // Surface a real bind failure (e.g. an unrelated process holding the port)
+  // as a clean message instead of a raw uncaught-exception stack trace —
+  // there was previously no listener here at all.
+  server.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`error: port ${port} is already in use by something else — is another AgentDyno instance (or a different app) already running?`);
+    } else {
+      console.error(`error: dashboard/API server failed: ${err.message}`);
+    }
+    process.exit(1);
+  });
   // LAN mode binds every interface (0.0.0.0) so other devices on the network
   // can reach it; default/local mode stays loopback-only, unchanged.
   server.listen(port, options.lan ? "0.0.0.0" : "127.0.0.1");

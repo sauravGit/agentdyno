@@ -86,6 +86,16 @@ test("partial-offload reports a sane layer split", () => {
   assert.ok(f.gpuLayers !== null && f.gpuLayers >= 0 && f.gpuLayers < 28);
 });
 
+test("partial-offload's maxComfortableContext checks room against gpu+ram, not gpu alone (regression: was silently 0 for every real gpu+cpu-split fit)", () => {
+  // Weights (12 GiB) already exceed the GPU budget alone (10.4 GiB) — that's
+  // exactly why this is partial-offload. Checking room against gpu-only
+  // budget makes it go negative unconditionally; the model DOES fit once
+  // gpu+ram are combined, and should get a real, positive context, not 0.
+  const f = fitQuant(model(), quant(12), hw(10.4, 16));
+  assert.equal(f.mode, "partial-offload");
+  assert.ok(f.maxComfortableContext > 0, `expected a positive max context, got ${f.maxComfortableContext}`);
+});
+
 test("maxComfortableContext caps at model window", () => {
   const m = model({ contextLength: 8192 });
   assert.equal(maxComfortableContext(m, quant(1), 64 * GIB), 8192);

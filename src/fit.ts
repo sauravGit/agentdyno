@@ -81,7 +81,16 @@ export function fitQuant(
     mode = need <= ram ? "cpu-only" : "wont-fit";
   }
 
-  const budget = gpu > 0 ? gpu : ram;
+  // The budget maxComfortableContext checks room against must match what the
+  // mode above actually determined is available: partial-offload and
+  // cpu-only both spill weights into system RAM, so checking against the
+  // GPU-only budget alone was making room go negative for any model whose
+  // weights already exceed GPU memory (the exact condition that put it in
+  // partial-offload in the first place) — maxComfortableContext silently
+  // returned 0 for every real, working gpu+cpu-split fit. Found via a live
+  // `dyno fit` run showing max-ctx: 0 for GPT-OSS-20B/Devstral/Qwen-14B, all
+  // models this project has actually served successfully.
+  const budget = mode === "cpu-only" ? ram : mode === "partial-offload" ? gpu + ram : gpu;
   return {
     model: m,
     quant: q,
