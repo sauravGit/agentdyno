@@ -10,14 +10,34 @@ AgentDyno is the dyno bench for local coding agents. It scans your machine,
 finds the open models that fit, launches them correctly — and then actually
 proves, with a five-probe agentic exam on your own hardware, that a model can
 drive tools before you wire [Goose](https://github.com/block/goose) or
-[Cline](https://cline.bot) to it — the two open-source agents AgentDyno
-battle-tests and treats as first-class citizens.
+[Cline](https://cline.bot) to it. Local, free, Apache-2.0. No accounts, no
+telemetry, no paid tier.
 
-Local, free, Apache-2.0. No accounts, no telemetry, no paid tier.
+[**Watch the ~77s launch film**](site/video/launch-v2.mp4) · [ONBOARDING.md](ONBOARDING.md) (step-by-step, ~15 min) · [Jump to Install](#install)
 
 <p align="center">
-  <img src="site/screenshots/desktop.png" alt="AgentDyno dashboard: hardware panel, model switcher, and the doctor exam" width="760">
+  <a href="site/video/launch-v2.mp4">
+    <img src="site/screenshots/launch-v2-poster.png" alt="Watch the AgentDyno launch film" width="640"><br>
+    <sub>▶ real narration, real captured output — click to play</sub>
+  </a>
 </p>
+
+<details>
+<summary><b>Table of contents</b></summary>
+
+- [Why](#why)
+- [At a glance](#at-a-glance)
+- [Install](#install)
+- [Quickstart](#quickstart)
+- [The exam (`doctor`)](#the-exam-doctor)
+- [Ollama backend](#ollama-backend)
+- [LAN / remote mode](#lan--remote-mode)
+- [Switcher, dashboard, IDE](#switcher-dashboard-ide)
+- [Command reference](#command-reference)
+- [How fit is computed](#how-fit-is-computed)
+- [Relationship to prior art](#relationship-to-prior-art)
+- [Contributing](#contributing)
+</details>
 
 ## Why
 
@@ -28,8 +48,17 @@ changes. Every one of those failure modes is documented across the ecosystem
 (references in [`research/REPORT.md`](research/REPORT.md)). Memory fit is
 necessary, not sufficient. AgentDyno measures the sufficient part.
 
-New here? [**ONBOARDING.md**](ONBOARDING.md) walks through every command,
-step by step, with real captured output, in about 15 minutes.
+## At a glance
+
+| | |
+|---|---|
+| **What it does** | scan hardware → rank models by real fit → run a 5-probe agentic exam → print a config only if it passed |
+| **Verdict format** | a letter grade (A/B/C/F), not a vibe — see [saved certificates](site/certificates/qwen3-8b.html) |
+| **Agents wired up** | [Goose](https://github.com/block/goose), [Cline](https://cline.bot) — both battle-tested live, not just researched |
+| **Where it runs** | your machine only — managed llama-server or your own Ollama daemon |
+| **VS Code** | activity-bar panel **and** a `@agentdyno` chat participant next to Copilot |
+| **Network exposure** | none by default; LAN mode is opt-in and bearer-token gated |
+| **Cost** | $0 — no accounts, no telemetry, no paid tier |
 
 ## Install
 
@@ -63,12 +92,12 @@ dyno setup       # guided: pick UI or CLI, ends with a connected agent
 
 `dyno setup` is the fast path: scan → pick a model → activate → run the exam
 → connect Goose / Cline (auto-launched in a new terminal) or install the
-VS Code extension (which also installs the Goose + Cline CLIs and Cline's
-own extension) — one flow instead of the manual steps below. It also detects
-leftovers from a previous install and offers to clean them first
+VS Code extension — one flow instead of the manual steps below. It also
+detects leftovers from a previous install and offers to clean them first
 (`dyno clean` does the same thing directly, any time).
 
-Or run each step yourself:
+<details>
+<summary>Or run each step yourself</summary>
 
 ```sh
 dyno scan        # what is this machine, honestly
@@ -78,6 +107,7 @@ dyno serve       # managed llama-server: right flags, health-polled
 dyno doctor      # THE EXAM: 5 probes, grade A-F, tok/s
 dyno connect goose    # wire an agent to the VERIFIED server
 ```
+</details>
 
 ## The exam (`doctor`)
 
@@ -97,11 +127,9 @@ certificates: [Qwen3-8B](site/certificates/qwen3-8b.html) (grade B) and
 [Qwen2.5-Coder-7B](site/certificates/qwen2.5-coder-7b.html) (grade F) — same
 laptop, opposite outcomes.
 
-## Ollama backend
-
-For privacy-conscious developers who already run (or want to run) models via
-[Ollama](https://ollama.com) rather than our managed llama-server: point AgentDyno
-at a local Ollama daemon instead.
+<a id="ollama-backend"></a>
+<details>
+<summary><b>Ollama backend</b> (privacy-first alternative to the managed llama-server)</summary>
 
 ```sh
 ollama serve                         # your daemon, your process, independent of us
@@ -119,11 +147,11 @@ Ollama's own registry resolves the tag on `pull`, which is all a backend needs.
 The dashboard's switcher table lists Ollama-pulled models and our
 managed-llama.cpp catalog side by side, ranked by the same one rule: verified
 beats unverified, always.
+</details>
 
-## LAN / remote mode
-
-Run AgentDyno on one machine, use it from another machine's VS Code on the
-same network.
+<a id="lan--remote-mode"></a>
+<details>
+<summary><b>LAN / remote mode</b> (use one machine's models from another machine's VS Code)</summary>
 
 ```sh
 dyno dashboard --lan              # on the machine running the model — prints a pairing token
@@ -136,6 +164,7 @@ Only a bearer-token-gated control-plane API is ever exposed to the network —
 the raw inference port (llama-server / Ollama) stays loopback-only on the host
 machine no matter what. `dyno remote status` / `dyno remote clear` show or
 drop the current remote target.
+</details>
 
 ## Switcher, dashboard, IDE
 
@@ -143,21 +172,26 @@ drop the current remote target.
   by `doctor` on this machine always outranks an unverified catalog prior,
   no matter the letter grade (we proved priors can be wrong — see BUILD_LOG.md
   D-011). `dyno switch <model-id>` or `--activate` pulls + serves the pick in
-  one command. Where a real external benchmark match exists (Aider's coding
-  leaderboard, family + size matched, no borrowed scores from bigger siblings)
-  it breaks ties; most laptop-sized models honestly show "no data" instead.
+  one command.
 - `dyno dashboard` — a loopback-only local web UI + JSON API (`127.0.0.1:8403`)
-  over the same scan/switch/doctor/connect logic: hardware panel, switcher
-  table with one-click activate, live doctor exam, connect-config generator.
+  over the same scan/switch/doctor/connect logic.
 - **VS Code extension** — a thin wrapper (not a reimplementation) that starts
   the dashboard and embeds it in a webview, with its own activity-bar icon.
   Also registers **`@agentdyno`**, a chat participant that shows up next to
   Copilot in VS Code's Chat view — `/status`, `/doctor`, and
   `/connect goose|cline`, all backed by the same local API. Installing the
   extension also installs the Goose and Cline CLIs and Cline's own VS Code
-  extension (`saoudrizwan.claude-dev`) — the two agents AgentDyno
-  battle-tests as first-class targets. Build a `.vsix` yourself with
-  `cd vscode-extension && npm install && npm run build && npx @vscode/vsce package`.
+  extension (`saoudrizwan.claude-dev`).
+
+<details>
+<summary>Build the VS Code extension yourself</summary>
+
+```sh
+cd vscode-extension && npm install && npm run build
+npx --yes @vscode/vsce package --no-dependencies --allow-missing-repository
+code --install-extension agentdyno-vscode-0.2.0.vsix
+```
+</details>
 
 ## Command reference
 
@@ -178,7 +212,9 @@ dyno dashboard [--lan]                    local web UI + API; --lan makes it LAN
 dyno remote discover|connect|status|clear reach another machine's AgentDyno server
 ```
 
-## How fit is computed
+<a id="how-fit-is-computed"></a>
+<details>
+<summary><b>How fit is computed</b></summary>
 
 `need(context) = weights + kv_cache(context) + overhead`, with KV geometry
 (layers, KV heads, head dim) taken from each model's real `config.json` —
@@ -187,6 +223,7 @@ Silicon unified-memory wired limit (~65% of RAM by default), NVIDIA free VRAM,
 half of system RAM for CPU. The catalog (8 models, coding + tool-calling
 focused) is generated from live Hugging Face metadata with exact file sizes
 and SHA-256 checksums — see `tools/build-catalog.ts`.
+</details>
 
 ## Relationship to prior art
 

@@ -65,7 +65,8 @@ report edits that never happen. Documented across Goose, OpenCode, Aider, Cline,
 
 <h2>// the proof (real output, one laptop, two models)</h2>
 <p>Measured on a MacBook Air M4, 16 GB. Both models fit comfortably. One is useless.</p>
-<div class="panel" style="padding:0;overflow:hidden"><video controls preload="metadata" poster="site/screenshots/desktop.png"><source src="site/video/launch.mp4" type="video/mp4"></video></div>
+<div class="panel" style="padding:0;overflow:hidden"><video controls preload="metadata" poster="site/screenshots/launch-v2-poster.png"><source src="site/video/launch-v2.mp4" type="video/mp4"></video></div>
+<p class="lede" style="font-size:14px">Updated narrated cut (~77s, real ElevenLabs voice) — see the 2026-07-29 addendum below. The original silent capture is still at <a href="site/video/launch.mp4">site/video/launch.mp4</a>.</p>
 <div class="two">
   <div class="panel"><span class="stamp f">F</span> &nbsp;<span class="mono">Qwen2.5-Coder-7B</span>
     <p style="font-size:14px">Fails P1: emits raw <span style="color:var(--fail)">&lt;function/&gt;</span> XML instead of a tool call. The agent loop never starts. <a href="site/certificates/qwen2.5-coder-7b.html">certificate</a></p></div>
@@ -183,14 +184,50 @@ unauthenticated LAN request, 200 with the correct pairing token, a real completi
 the proxy using the exact headers Claude Code/Goose/Cline send, and <span class="mono">dyno remote
 discover/connect</span> finding and using the advertised server end to end.</p>
 
+<h2>// v0.7.x — published for real; VS Code chat participant; clean-slate reinstall; docs/video refresh</h2>
+<p>AgentDyno is no longer source-only. <span class="mono">brew install sauravGit/agentdyno/agentdyno</span>
+and <span class="mono">npm install -g agentdyno</span> both work end to end, verified with fresh
+uninstall/reinstall cycles against the real, public npm registry and a real Homebrew tap — not just
+read from a config file. Getting there surfaced real, non-obvious bugs, each found by actually running
+the pipeline: an oversized npm package (a nested <span class="mono">node_modules</span> wasn't excluded
+by <span class="mono">.npmignore</span>), a Homebrew npm-install cooldown rejecting a dependency
+published minutes earlier, a GitHub Actions release-event trigger that only fires for draft releases,
+a CI job publishing without ever running the build, Node 20's test runner not supporting a glob pattern
+that worked locally on a newer Node, and a granular npm token missing the 2FA-bypass flag CI publishing
+requires. Five release tags were needed to work through them one at a time; each is a real, inspectable
+GitHub release. This also required making the repository <strong>public</strong> — Homebrew's
+unauthenticated download of a release asset 404'd against the private repo, so the guardrail table
+below has been corrected to reflect that, not left stale.</p>
+<p>Also shipped: a <span class="mono">@agentdyno</span> chat participant in VS Code's Chat view
+(next to Copilot), with <span class="mono">/status</span>, <span class="mono">/doctor</span>, and
+<span class="mono">/connect goose|cline</span> — battle-tested against a real activated model and a
+real doctor exam, which caught a real bug (a 409 error response would have rendered as literal
+"undefined" in chat). A clean-slate reinstall flow (<span class="mono">dyno clean</span>, and
+<span class="mono">dyno setup</span> asking up front) that is opt-in per category rather than wiping
+anything by default — a first draft auto-uninstalled the VS Code extension, caught before shipping.</p>
+<p>This pass (2026-07-29): README rewritten for a public audience (badges, screenshot, brew/npm-first
+install, full command reference), <span class="mono">TESTING.md</span> renamed to
+<span class="mono">ONBOARDING.md</span> and reframed as a getting-started guide, a real
+<span class="mono">.github/labeler.yml</span> added (the existing workflow referenced one that never
+existed), and a sweep of leftover <span class="mono">magix-box</span>/<span class="mono">mb</span>
+branding in the CLI's own <span class="mono">--help</span> and error strings from before the rename to
+AgentDyno/<span class="mono">dyno</span>. The launch video was re-cut with real ElevenLabs narration
+(free tier; verified working) over real captured CLI output, fixing stale
+<span class="mono">connect claude</span>/<span class="mono">opencode</span> references in the original
+silent cut — see the deliverables map below. Two other keys present in this project's <span class="mono">.env</span>
+(HeyGen, Kie.ai) were tested against their own account-status endpoints before use and both returned
+"Unauthorized" — disclosed rather than silently skipped; no avatar or AI-generated imagery is in this
+video as a result.</p>
+
 <h2>// deliverables map</h2>
 <table class="map">
 <tr><th>artifact</th><th>what it is</th></tr>
 <tr><td><a href="site/index.html">site/index.html</a></td><td>Landing site — real numbers, <a href="site/screenshots/desktop.png">desktop</a> + <a href="site/screenshots/mobile.png">mobile</a> verified</td></tr>
 <tr><td><a href="site/dashboard/index.html">site/dashboard/</a></td><td>Local dashboard UI (serve via <span class="mono">dyno dashboard</span>)</td></tr>
 <tr><td><a href="vscode-extension/">vscode-extension/</a></td><td>VS Code extension shell + packaged .vsix</td></tr>
-<tr><td><a href="site/video/launch.mp4">launch.mp4</a></td><td>45s launch film — the F-vs-B story</td></tr>
-<tr><td><a href="site/video/walkthrough.mp4">walkthrough.mp4</a></td><td>Product walkthrough — full command flow</td></tr>
+<tr><td><a href="site/video/launch-v2.mp4">launch-v2.mp4</a></td><td>~77s narrated launch film (real ElevenLabs voice) — the F-vs-B story, updated for Goose/Cline + brew/npm install</td></tr>
+<tr><td><a href="site/video/launch.mp4">launch.mp4</a></td><td>Original 45s silent launch capture (2026-07-24) — superseded by launch-v2.mp4 above, kept for reference</td></tr>
+<tr><td><a href="site/video/walkthrough.mp4">walkthrough.mp4</a></td><td>Product walkthrough — full command flow (silent, predates the Goose/Cline-only pivot)</td></tr>
 <tr><td><a href="THESIS.md">THESIS.md</a></td><td>Product thesis + the falsified claim, kept visible with its correction</td></tr>
 <tr><td><a href="research/REPORT.md">REPORT.md</a></td><td>12-tool landscape, every claim sourced</td></tr>
 <tr><td><a href="research/SKEPTIC.md">SKEPTIC.md</a></td><td>Adversarial pass that forced the pivot</td></tr>
@@ -206,7 +243,11 @@ discover/connect</span> finding and using the advertised server end to end.</p>
 <h2>// guardrails held</h2>
 <ul>
 <li><span class="ok">No new spending</span> — only free tools; domain availability checked (agentdyno.dev unregistered), nothing purchased.</li>
-<li><span class="ok">Published nothing</span> — repo is <strong>private</strong>; server binds 127.0.0.1; no telemetry; nothing posted or emailed.</li>
+<li><span class="warnc">Published, deliberately, once the product was real</span> — the repo went public and
+agentdyno shipped to the npm registry + a Homebrew tap in v0.7.x, an explicit later decision (not
+this run's original guardrail — see the v0.7.x addendum above for why). The inference server itself
+still only ever binds 127.0.0.1 by default; LAN mode is opt-in and token-gated. No telemetry; nothing
+posted or emailed on the user's behalf.</li>
 <li><span class="ok">Invented nothing</span> — every stat and complaint traces to a fetched URL; inferences labeled; the F/B grades are real runs on this machine, not mockups.</li>
 <li><span class="ok">No code copied</span> — Athanor Lite is source-available/non-commercial; this is a clean-room Apache-2.0 build, its source excluded from the repo.</li>
 <li><span class="ok">Never asked, never stalled</span> — every judgment call logged in BUILD_LOG.md; the one real blocker (GitHub auth) resolved via an already-authenticated account.</li>

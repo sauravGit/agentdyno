@@ -36,14 +36,16 @@ SCENE 3 (0:28-0:50) — terminal, the heart
   anything up."
 
 SCENE 4 (0:50-1:02) — terminal
-  $ dyno connect claude   / connect opencode
+  $ dyno connect goose   / connect cline
   -> env vars + VERIFIED banner
   VO: "Connect prints a config only after the model has passed on your
-  machine. Claude Code, OpenCode, Aider — local, private, no subscription."
+  machine — for Goose or Cline, the two open-source agents AgentDyno
+  battle-tests. Local, private, no subscription."
 
 CARD 2 (1:02-1:10)
   agentdyno
   Don't trust "it fits." Measure it.
+  brew install sauravGit/agentdyno/agentdyno
   Apache-2.0 - no accounts - no telemetry
 
 ---

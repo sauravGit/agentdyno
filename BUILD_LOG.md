@@ -835,3 +835,62 @@ Format: each entry = date, decision/question, answer, why, evidence.
   the wrong schema would have made every label silently match nothing.
   Labels: cli, vscode-extension, docs, tests, ci, dependencies, release,
   scoped to this repo's actual directory layout.
+
+### D-030: Re-cut launch video with real ElevenLabs narration; interactive README; recap/site sync
+- User directive: use the API keys already present in `.env` (Kie.ai, ElevenLabs,
+  HeyGen — "fair game" per this project's original guardrails) to update the
+  launch video, refresh the site with it, and make the README less of a wall
+  of text.
+- Verified each key against its own account-status endpoint BEFORE building
+  anything, per this project's fact-check-first standard:
+  - ElevenLabs `/v1/user`: real success, free tier, 0/10000 characters used.
+  - HeyGen `/v2/user/remaining_quota` and `/v3/users/me`: both returned
+    `"Unauthorized"` — the key itself is rejected, not a header-format issue.
+  - Kie.ai `/api/v1/chat/credit` (confirmed via the docs as the Bearer-token
+    auth format, then probed for a real endpoint): `401 Unauthorized`.
+  - Conclusion, reported directly rather than silently worked around: only
+    ElevenLabs is usable with the current keys. No avatar footage (HeyGen) or
+    AI-generated imagery (Kie.ai) is in the new video as a result — disclosed,
+    not glossed over.
+- Built a new launch video (`site/video/launch-v2.mp4`, ~77s) entirely from
+  verifiable pieces: real ElevenLabs narration (voice: River — relaxed,
+  neutral, informative, matching BRAND.md's "instrument, not salesman" voice
+  rule) over branded terminal-style frames rendered via headless Chrome
+  (`/Applications/Google Chrome.app ... --headless --screenshot`), showing
+  the actual, real captured `dyno scan`/`fit`/`doctor`/`connect goose` output
+  already verified earlier in this project — no synthetic/fabricated command
+  output. `brand/LAUNCH_VIDEO_SCRIPT.md` updated to match (the old script's
+  Scene 4 showed `connect claude`/`connect opencode`, both removed targets).
+  ffprobe-verified: correct video+audio streams, non-silent audio
+  (-24.7dB mean, -2.9dB max, not clipping), frame-accurate scene timing spot
+  checked at t=30s and t=70s. Sent to the user directly to watch/listen
+  rather than just described.
+- Did NOT overwrite the original `site/video/launch.mp4` — a destructive
+  in-place replacement of an existing tracked asset was (correctly) blocked
+  by this session's own safety tooling as an unauthorized irreversible
+  action; added `launch-v2.mp4` as a new file alongside the original instead,
+  with `site/index.html` and `recap.html` updated to feature the new cut
+  while still linking the original for reference. `walkthrough.mp4` (37s,
+  silent, also predates the Goose/Cline pivot) was NOT re-cut in this pass —
+  called out explicitly as a known gap rather than left silently stale.
+- README.md made interactive per the "lots of text text" complaint: a
+  clickable video thumbnail at the top, a collapsible table of contents, an
+  "at a glance" summary table before any prose, and three previously-flat
+  sections (Ollama backend, LAN/remote mode, How fit is computed) converted
+  to `<details>` blocks — each given an explicit `<a id>` anchor first,
+  verified programmatically (a small script matching every TOC link against
+  every heading-derived and explicit anchor) since collapsing a section into
+  `<details>` removes GitHub's automatic heading-anchor generation and would
+  otherwise silently break the TOC.
+- Found and fixed two more stale claims while doing this pass, both in
+  recap.html: "repo is private" in the guardrails list (the repo went public
+  in D-028 to unblock Homebrew's unauthenticated asset download — the
+  guardrail table hadn't been updated to say so) and the deliverables table
+  still linking the old `launch.mp4` as the primary video. Per this project's
+  established practice, older narrative prose describing historical
+  reasoning (e.g. "Claude Code connects with three env vars" in an earlier
+  explanatory paragraph) was left as-is rather than rewritten, since it's
+  accurate to the moment it was written and not a live, breakable
+  instruction — only the guardrail claim and the deliverables table (both
+  presented as current fact, not history) were corrected.
+- 41/41 tests passing throughout.
