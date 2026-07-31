@@ -5,13 +5,18 @@ name: Realistic-scenario testing streak
 # gate. Runs real CLI scenarios one at a time; on failure, documents it, adds
 # a regression test + observed timing as a benchmark baseline, fixes the
 # bug, verifies, and restarts the streak at 0. Stops at 10 consecutive
-# successes. Requires an ANTHROPIC_API_KEY repo secret.
+# successes. Requires a CLAUDE_CODE_OAUTH_TOKEN secret scoped to the "main"
+# GitHub Environment.
 #
 # Scope note: CI runners have no GPU/Metal acceleration and no downloaded
 # models, so "realistic scenarios" here means real CLI behavior (scan, fit
 # math, pull --runtime, clean, status, connect error paths, dashboard/daemon
 # lifecycle) — not a full pull+serve+doctor run against a real model, which
 # needs real user hardware to mean anything honest.
+#
+# Design note (see doc-sync-loop.yml for the full story): the agent is not
+# responsible for git/PR operations. It only edits files (regression tests,
+# bug fixes); a separate deterministic step opens the PR if anything changed.
 
 on:
   push:
@@ -21,21 +26,23 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  id-token: write
 
 jobs:
   test-streak:
     runs-on: ubuntu-latest
-    # ANTHROPIC_API_KEY is scoped to the "main" GitHub Environment, not a
+    # CLAUDE_CODE_OAUTH_TOKEN is scoped to the "main" GitHub Environment, not a
     # plain repo secret — a job must declare its environment to see it.
     environment: main
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          base_branch: main
-          branch_prefix: "test-streak/"
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             REPO: ${{ github.repository }}
             TAG: ${{ github.ref_name }}
@@ -51,15 +58,37 @@ jobs:
 
             On failure: document what happened, add a regression test to
             test/*.test.js, record the observed timing/behavior as a
-            benchmark baseline in a comment, fix the bug, rebuild and re-run
-            `npm test` to confirm the fix, then restart the streak at 0.
-            On success, continue to the next scenario and increment the
-            streak. Stop after 10 consecutive successes.
+            benchmark baseline in a code comment near the test, fix the bug,
+            rebuild and re-run `npm test` to confirm the fix, then restart
+            the streak at 0. On success, continue to the next scenario and
+            increment the streak. Stop after 10 consecutive successes.
 
-            If any bug was found and fixed, open a pull request describing
-            each failure, its regression test, and its fix. If all 10
-            scenarios passed with nothing to fix, do not open a PR — end
-            cleanly and say so.
+            Do not run git commands and do not open a pull request —
+            committing and PR creation are handled separately. Just leave
+            the working tree with your edits (or no edits, if all 10
+            scenarios passed with nothing to fix). End by stating plainly
+            how many scenarios you ran, the final streak count, and exactly
+            what you changed, if anything.
           claude_args: |
-            --max-turns 40
+            --max-turns 60
             --allowedTools Read,Edit,Write,Grep,Glob,"Bash(npm test)","Bash(npm run build)","Bash(node dist/src/cli.js *)"
+
+      - name: Open a PR if any fix was made
+        if: always()
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            branch="test-streak/${{ github.ref_name }}"
+            git config user.name "claude[bot]"
+            git config user.email "claude[bot]@users.noreply.github.com"
+            git checkout -b "$branch"
+            git add -A
+            git commit -m "test: fixes found by the realistic-scenario testing streak (${{ github.ref_name }})"
+            git push origin "$branch"
+            gh pr create --title "Test-streak fixes for ${{ github.ref_name }}" \
+              --body "Automated findings from the realistic-scenario testing streak, triggered by the ${{ github.ref_name }} release tag. See the workflow run for the full session log." \
+              --base main --head "$branch"
+          else
+            echo "No changes — all scenarios passed with nothing to fix."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
