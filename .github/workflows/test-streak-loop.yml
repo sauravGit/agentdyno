@@ -35,6 +35,7 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           base_branch: main
           branch_prefix: "test-streak/"
           prompt: |
@@ -62,5 +63,5 @@ jobs:
             scenarios passed with nothing to fix, do not open a PR — end
             cleanly and say so.
           claude_args: |
-            --max-turns 40
-            --allowedTools Read,Edit,Write,Grep,Glob,"Bash(npm test)","Bash(npm run build)","Bash(node dist/src/cli.js *)"
+            --max-turns 80
+            --allowedTools Read,Edit,Write,Grep,Glob,"Bash(npm test)","Bash(npm run build)","Bash(node dist/src/cli.js *)","Bash(git add *)","Bash(git commit *)","Bash(git push*)","Bash(git status*)","Bash(git diff*)","Bash(gh pr create*)"
