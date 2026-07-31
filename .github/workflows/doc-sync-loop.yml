@@ -19,6 +19,9 @@ permissions:
 jobs:
   doc-sync:
     runs-on: ubuntu-latest
+    # ANTHROPIC_API_KEY is scoped to the "main" GitHub Environment, not a
+    # plain repo secret — a job must declare its environment to see it.
+    environment: main
     steps:
       - uses: actions/checkout@v4
 
