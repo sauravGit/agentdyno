@@ -4,7 +4,7 @@ name: Documentation sync loop
 # PR touching src/** or package.json, checks a bounded set of doc claims
 # against real current behavior, fixes only what's stale, verifies with
 # npm test, and comments — never touches source code itself. Also runnable
-# manually via workflow_dispatch. Requires an ANTHROPIC_API_KEY secret
+# manually via workflow_dispatch. Requires a CLAUDE_CODE_OAUTH_TOKEN secret
 # scoped to the "main" GitHub Environment.
 #
 # Design note (found by actually running this twice, ~$6 combined, both
@@ -32,7 +32,7 @@ permissions:
 jobs:
   doc-sync:
     runs-on: ubuntu-latest
-    # ANTHROPIC_API_KEY is scoped to the "main" GitHub Environment, not a
+    # CLAUDE_CODE_OAUTH_TOKEN is scoped to the "main" GitHub Environment, not a
     # plain repo secret — a job must declare its environment to see it.
     environment: main
     steps:
@@ -43,7 +43,7 @@ jobs:
 
       - uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             REPO: ${{ github.repository }}

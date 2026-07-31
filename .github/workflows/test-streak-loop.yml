@@ -5,7 +5,7 @@ name: Realistic-scenario testing streak
 # gate. Runs real CLI scenarios one at a time; on failure, documents it, adds
 # a regression test + observed timing as a benchmark baseline, fixes the
 # bug, verifies, and restarts the streak at 0. Stops at 10 consecutive
-# successes. Requires an ANTHROPIC_API_KEY secret scoped to the "main"
+# successes. Requires a CLAUDE_CODE_OAUTH_TOKEN secret scoped to the "main"
 # GitHub Environment.
 #
 # Scope note: CI runners have no GPU/Metal acceleration and no downloaded
@@ -31,7 +31,7 @@ permissions:
 jobs:
   test-streak:
     runs-on: ubuntu-latest
-    # ANTHROPIC_API_KEY is scoped to the "main" GitHub Environment, not a
+    # CLAUDE_CODE_OAUTH_TOKEN is scoped to the "main" GitHub Environment, not a
     # plain repo secret — a job must declare its environment to see it.
     environment: main
     steps:
@@ -41,7 +41,7 @@ jobs:
 
       - uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             REPO: ${{ github.repository }}
