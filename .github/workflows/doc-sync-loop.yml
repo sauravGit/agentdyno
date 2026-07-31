@@ -1,0 +1,51 @@
+name: Documentation sync loop
+
+# Saved project loop (LOOPS.md: "Documentation sync loop"). Fires whenever
+# source changes on main, audits every doc against real current behavior,
+# fixes only what's stale, verifies with npm test, and opens a PR — never
+# touches source code itself. Requires an ANTHROPIC_API_KEY repo secret.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "package.json"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  doc-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          base_branch: main
+          branch_prefix: "docs-sync/"
+          prompt: |
+            REPO: ${{ github.repository }}
+            COMMIT: ${{ github.sha }}
+
+            Review the whole codebase against README.md, ONBOARDING.md,
+            BUILD_LOG.md, site/*.html, and recap.html. For each doc claim
+            (commands, versions, file paths, output examples), check it
+            against real current behavior — read the actual source, run
+            commands where possible.
+
+            Fix stale docs only. Never edit source code (src/**,
+            vscode-extension/src/**, test/**) — this loop is documentation
+            only. After each fix, re-check it against real behavior and run
+            `npm test` to confirm nothing else broke. Repeat until no more
+            stale doc items are found.
+
+            If you find no stale documentation, do not open a PR — end
+            cleanly and say so. If you find and fix stale docs, open a pull
+            request describing exactly what was stale and what changed.
+          claude_args: |
+            --max-turns 30
+            --allowedTools Read,Edit,Write,Grep,Glob,"Bash(npm test)","Bash(npm run build)","Bash(node dist/src/cli.js *)"

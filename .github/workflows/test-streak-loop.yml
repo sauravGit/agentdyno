@@ -1,0 +1,62 @@
+name: Realistic-scenario testing streak
+
+# Saved project loop (LOOPS.md: "Realistic-scenario testing streak"). Fires
+# on every release tag push, before the npm-publish workflow's own build/test
+# gate. Runs real CLI scenarios one at a time; on failure, documents it, adds
+# a regression test + observed timing as a benchmark baseline, fixes the
+# bug, verifies, and restarts the streak at 0. Stops at 10 consecutive
+# successes. Requires an ANTHROPIC_API_KEY repo secret.
+#
+# Scope note: CI runners have no GPU/Metal acceleration and no downloaded
+# models, so "realistic scenarios" here means real CLI behavior (scan, fit
+# math, pull --runtime, clean, status, connect error paths, dashboard/daemon
+# lifecycle) — not a full pull+serve+doctor run against a real model, which
+# needs real user hardware to mean anything honest.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  test-streak:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          base_branch: main
+          branch_prefix: "test-streak/"
+          prompt: |
+            REPO: ${{ github.repository }}
+            TAG: ${{ github.ref_name }}
+
+            Test one realistic AgentDyno CLI scenario at a time, for real
+            (actually run the command, not a mock). CI has no GPU/Metal
+            acceleration and no downloaded models — scope scenarios to real
+            CLI behavior that's honest to test here: scan, fit math across
+            hardware profiles, pull --runtime, clean, status, connect error
+            paths, dashboard/daemon lifecycle (start/detect-already-running/
+            stop). Do not attempt a full pull+serve+doctor run against a
+            real model in CI.
+
+            On failure: document what happened, add a regression test to
+            test/*.test.js, record the observed timing/behavior as a
+            benchmark baseline in a comment, fix the bug, rebuild and re-run
+            `npm test` to confirm the fix, then restart the streak at 0.
+            On success, continue to the next scenario and increment the
+            streak. Stop after 10 consecutive successes.
+
+            If any bug was found and fixed, open a pull request describing
+            each failure, its regression test, and its fix. If all 10
+            scenarios passed with nothing to fix, do not open a PR — end
+            cleanly and say so.
+          claude_args: |
+            --max-turns 40
+            --allowedTools Read,Edit,Write,Grep,Glob,"Bash(npm test)","Bash(npm run build)","Bash(node dist/src/cli.js *)"
