@@ -1,11 +1,19 @@
 name: Documentation sync loop
 
 # Saved project loop (LOOPS.md: "Documentation sync loop"). Fires on every
-# PR touching src/** or package.json, audits every doc against real current
-# behavior, fixes only what's stale directly on the PR's own branch, verifies
-# with npm test, and comments — never touches source code itself. Also
-# runnable manually via workflow_dispatch. Requires an ANTHROPIC_API_KEY
-# secret scoped to the "main" GitHub Environment.
+# PR touching src/** or package.json, checks a bounded set of doc claims
+# against real current behavior, fixes only what's stale, verifies with
+# npm test, and comments — never touches source code itself. Also runnable
+# manually via workflow_dispatch. Requires an ANTHROPIC_API_KEY secret
+# scoped to the "main" GitHub Environment.
+#
+# Design note (found by actually running this twice, ~$6 combined, both
+# hitting max-turns with the same unexplained permission-denial count):
+# the agent is NOT responsible for git operations. Asking it to also figure
+# out git identity/add/commit/push added unbounded trial-and-error on top
+# of an already open-ended "review everything" task. Committing is now a
+# separate, deterministic shell step — the agent's only job is to edit
+# files, which it has clear tools for.
 
 on:
   pull_request:
@@ -41,23 +49,47 @@ jobs:
             REPO: ${{ github.repository }}
             BRANCH: ${{ github.head_ref || github.ref_name }}
 
-            Review the whole codebase against README.md, ONBOARDING.md,
-            BUILD_LOG.md, site/*.html, and recap.html. For each doc claim
-            (commands, versions, file paths, output examples), check it
-            against real current behavior — read the actual source, run
-            commands where possible.
+            Check these specific, bounded claims in README.md, ONBOARDING.md,
+            BUILD_LOG.md, site/index.html, and recap.html against the real
+            current implementation. Do not go beyond this list:
 
-            Fix stale docs only. Never edit source code (src/**,
-            vscode-extension/src/**, test/**) — this loop is documentation
-            only. After each fix, re-check it against real behavior and run
-            `npm test` to confirm nothing else broke. Repeat until no more
-            stale doc items are found.
+            1. The version number(s) mentioned match package.json's version.
+            2. Every `dyno <command>` mentioned actually appears in src/cli.ts's
+               HELP text (grep for it).
+            3. Every file path mentioned (e.g. vscode-extension/*, site/*)
+               actually exists.
+            4. The vscode-extension version mentioned matches
+               vscode-extension/package.json's version.
+            5. Any literal captured command output block whose command you can
+               safely run read-only (e.g. `dyno --version`, `dyno scan`) still
+               matches — only if a real local dyno build already exists at
+               dist/src/cli.js; skip this check otherwise rather than trying
+               to build or install anything.
 
-            You are running on this PR's own branch. If you find no stale
-            documentation, make no changes and say so in a PR comment. If
-            you find and fix stale docs, commit the fixes directly to this
-            branch and leave a PR comment describing exactly what was stale
-            and what changed.
+            Fix only what's genuinely stale from this list. Never edit source
+            code (src/**, vscode-extension/src/**, test/**) — this loop is
+            documentation only. If you edit a file, run `npm test` once at
+            the end to confirm nothing else broke (it should not touch
+            source, so this should always still pass).
+
+            Do not run git commands — committing is handled separately. Just
+            leave the working tree with your file edits (or no edits, if
+            everything checked out). End by stating plainly whether you
+            found anything stale, and if so, exactly what you changed.
           claude_args: |
-            --max-turns 60
-            --allowedTools Read,Edit,Write,Grep,Glob,"Bash(npm test)","Bash(npm run build)","Bash(node dist/src/cli.js *)","Bash(git add *)","Bash(git commit *)","Bash(git push*)","Bash(git status*)","Bash(git diff*)"
+            --max-turns 25
+            --allowedTools Read,Edit,Write,Grep,Glob,"Bash(npm test)","Bash(node dist/src/cli.js *)"
+
+      - name: Commit and push any doc fixes
+        if: always()
+        run: |
+          if [ -n "$(git status --porcelain -- README.md ONBOARDING.md BUILD_LOG.md site recap.html 2>/dev/null)" ]; then
+            git config user.name "claude[bot]"
+            git config user.email "claude[bot]@users.noreply.github.com"
+            git add README.md ONBOARDING.md BUILD_LOG.md site recap.html
+            git commit -m "docs: sync stale documentation (automated doc-sync loop)"
+            git push origin HEAD:"${{ github.head_ref || github.ref_name }}"
+            echo "Pushed doc fixes."
+          else
+            echo "No doc changes to commit."
+          fi
