@@ -2,13 +2,13 @@
 
 ## Documentation sync loop
 
-Audits every doc against the actual current implementation, fixes what's stale, re-verifies by re-running what's documented, and stops by opening a pull request — never touches source code, only docs.
+Audits every doc against the actual current implementation, fixes what's stale, re-verifies by re-running what's documented, and commits fixes directly to the open PR — never touches source code, only docs.
 
 Prompt:
-> Review the whole codebase against README.md, ONBOARDING.md, BUILD_LOG.md, site/*.html, and recap.html. For each doc claim (commands, versions, file paths, output examples), re-run or re-check it against real current behavior. Fix stale docs only — never source code. After each fix, re-verify against real behavior and run `npm test`. Repeat until no more stale items are found, then open a pull request with the changes. Ask before merging.
+> Review the whole codebase against README.md, ONBOARDING.md, BUILD_LOG.md, site/*.html, and recap.html. For each doc claim (commands, versions, file paths, output examples), re-run or re-check it against real current behavior. Fix stale docs only — never source code. After each fix, re-verify against real behavior and run `npm test`. Repeat until no more stale items are found, then commit the fixes to the PR branch and comment describing what changed.
 
 Saved: 2026-07-31
-Trigger: GitHub Action, push to main touching `src/**` or `package.json` (`.github/workflows/doc-sync-loop.yml`). Requires an `ANTHROPIC_API_KEY` repo secret.
+Trigger: GitHub Action, on every PR touching `src/**` or `package.json` (`.github/workflows/doc-sync-loop.yml`), plus manual `workflow_dispatch`. Runs on the PR's own branch and commits fixes there rather than opening a separate PR. Requires an `ANTHROPIC_API_KEY` secret scoped to the "main" GitHub Environment.
 
 ## Realistic-scenario testing streak
 
